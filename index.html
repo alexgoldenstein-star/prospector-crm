@@ -244,6 +244,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
     <button class="nav-item" onclick="showPanel('importar')"><span class="nav-ic">↑</span>Importar Excel/CSV</button>
     <div class="nav-lbl">Comunicación</div>
     <button class="nav-item" onclick="showPanel('mensajes')"><span class="nav-ic">✦</span>Mensajes IA</button>
+    <button class="nav-item" onclick="showPanel('emails')"><span class="nav-ic">📧</span>Campañas Email</button>
+    <button class="nav-item" onclick="showPanel('training')"><span class="nav-ic">🎓</span>Entrenar Bot</button>
     <button class="nav-item" onclick="showPanel('bot')">
       <span class="nav-ic">◎</span>Bot WhatsApp
       <span class="nav-badge" id="bot-notif" style="display:none">!</span>
@@ -307,6 +309,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
         <button class="fbtn" data-f="interesado" onclick="setF(this,'interesado')">Interesado</button>
         <button class="fbtn" data-f="cliente" onclick="setF(this,'cliente')">Cliente</button>
         <div id="rubroFtrs" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        <button class="btn btn-g" style="margin-left:auto;font-size:12px" onclick="checkDuplicates()">🔍 Duplicados</button>
       </div>
       <div class="tbl">
         <div class="tbl-hdr"><div>Empresa</div><div>Rubro</div><div class="col-zona">Zona</div><div class="col-rating">Rating</div><div>Estado</div><div>Acciones</div></div>
@@ -323,28 +326,42 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
     <div class="panel" id="panel-scraper">
       <div class="scraper-grid">
         <div class="scraper-card">
-          <div class="sc-title">🗺 Google Maps Places</div>
-          <div class="sc-sub">Busca negocios por rubro y zona. Requiere API Key configurada.</div>
+          <div class="sc-title">🗺 Búsqueda por zona</div>
+          <div class="sc-sub">Hasta 60 resultados por búsqueda con paginación automática.</div>
           <div class="fg"><label class="flbl">Zona / Ciudad</label><input class="fi" id="sc-zona" value="CABA, Argentina"></div>
           <div class="fg"><label class="flbl">Rubro</label><select class="fs" id="sc-rubro"><option value="">Seleccionar...</option></select></div>
-          <div class="fg"><label class="flbl">Radio (km)</label><input class="fi" id="sc-radio" type="number" value="5" min="1" max="50"></div>
-          <button class="btn btn-p" style="width:100%;margin-top:6px" onclick="runScraper()">🔍 Buscar prospectos</button>
+          <button class="btn btn-p" style="width:100%;margin-top:8px" onclick="runScraper()">🔍 Buscar en esta zona (hasta 60)</button>
         </div>
         <div class="scraper-card">
-          <div class="sc-title">📊 Estado del scraper</div>
-          <div class="sc-sub">Caché inteligente — solo re-busca si los datos tienen más de 7 días.</div>
-          <div id="scraper-status" style="font-size:13px;color:var(--text2);line-height:1.8;">
-            <div>Última búsqueda: <span style="color:var(--text)">nunca</span></div>
-            <div>Prospectos importados: <span style="color:var(--green)" id="sc-imported">0</span></div>
-            <div>API Key Maps: <span id="sc-key-st" style="color:var(--orange)">no configurada</span></div>
+          <div class="sc-title">🇦🇷 Escaneo nacional automático</div>
+          <div class="sc-sub">Busca el rubro seleccionado en 25 ciudades de todo el país. Puede tardar 3-5 minutos.</div>
+          <div class="fg"><label class="flbl">Rubro a escanear</label><select class="fs" id="sc-rubro-nacional" onchange="document.getElementById('sc-rubro').value=this.value"><option value="">Seleccionar...</option></select></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-p" style="flex:1" onclick="document.getElementById('sc-rubro').value=document.getElementById('sc-rubro-nacional').value;runNationalScan()">🌐 Escaneo nacional</button>
+            <button class="btn btn-r" id="national-scan-stop" style="display:none" onclick="stopNationalScan()">⏹ Detener</button>
+          </div>
+          <div id="national-scan-status" style="display:none;margin-top:12px">
+            <div style="font-size:12px;color:var(--text2);margin-bottom:6px" id="national-scan-prog">Iniciando...</div>
+            <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden">
+              <div id="national-scan-bar" style="height:100%;background:var(--accent);border-radius:3px;width:0%;transition:width .3s"></div>
+            </div>
           </div>
         </div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:16px;font-size:12px;color:var(--text2);display:flex;gap:20px">
+        <span>API Key Maps: <span id="sc-key-st" style="color:var(--orange)">no configurada</span></span>
+        <span>Importados hoy: <span style="color:var(--green)" id="sc-imported">0</span></span>
+        <span style="color:var(--text3)">Límite: 60 por zona · sin límite en escaneo nacional</span>
       </div>
       <div id="scraperRes" style="display:none">
         <div class="sec-hdr">
           <div class="sec-title">Resultados</div>
           <div class="sec-cnt" id="sc-cnt">0</div>
-          <button class="btn btn-g" style="margin-left:auto" onclick="importAllScraper()">↓ Importar todos</button>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button class="btn btn-g" onclick="exportScraperCSV()">📋 Exportar CSV</button>
+            <button class="btn btn-g" onclick="enrichAllScraper()">🔍 Enriquecer todos</button>
+            <button class="btn btn-p" onclick="importAllScraper()">↓ Importar todos al CRM</button>
+          </div>
         </div>
         <div id="scraperResBody"></div>
       </div>
@@ -375,6 +392,75 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
           <button class="btn btn-p" onclick="importData()">↓ Importar al CRM</button>
           <button class="btn btn-g" onclick="resetImport()">✕ Cancelar</button>
         </div>
+      </div>
+    </div>
+
+    <!-- EMAIL CAMPAIGNS -->
+    <div class="panel" id="panel-emails">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+        <div class="scraper-card">
+          <div class="sc-title">📧 Generador de email masivo</div>
+          <div class="sc-sub">Generá el asunto y cuerpo del email con IA, personalizado por rubro. Enviá en tandas de 50.</div>
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Rubro objetivo</label>
+            <select class="fs" id="email-rubro"><option value="">Todos los rubros</option></select>
+          </div>
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Tipo de email</label>
+            <select class="fs" id="email-tipo">
+              <option value="presentacion">Presentación inicial</option>
+              <option value="catalogo">Envío de catálogo</option>
+              <option value="promocion">Promoción especial</option>
+              <option value="seguimiento">Seguimiento</option>
+              <option value="reactivacion">Reactivación</option>
+            </select>
+          </div>
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Contexto / Promoción (opcional)</label>
+            <input class="fi" id="email-ctx" placeholder="ej: 20% descuento sillas de oficina este mes">
+          </div>
+          <button class="btn btn-p" style="width:100%" onclick="genEmailCampaign()">✦ Generar email con IA</button>
+        </div>
+        <div class="scraper-card">
+          <div class="sc-title">📊 Estado de campañas</div>
+          <div class="sc-sub">Seguimiento de tandas enviadas y pendientes.</div>
+          <div id="email-stats" style="font-size:13px;color:var(--text2);line-height:2">
+            <div>Total con email: <span style="color:var(--text)" id="em-total">—</span></div>
+            <div>Tandas de 50: <span style="color:var(--text)" id="em-tandas">—</span></div>
+            <div>Enviados: <span style="color:var(--green)" id="em-sent">0</span></div>
+            <div>Pendientes: <span style="color:var(--orange)" id="em-pending">—</span></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <button class="btn btn-g" style="font-size:12px" onclick="exportEmailList()">📋 Exportar lista emails</button>
+            <button class="btn btn-g" style="font-size:12px" onclick="showBatchSelector()">📦 Ver tandas</button>
+          </div>
+        </div>
+      </div>
+      <!-- Email preview -->
+      <div id="email-preview-wrap" style="display:none">
+        <div class="sec-hdr">
+          <div class="sec-title">Vista previa del email</div>
+          <div id="email-batch-info" style="font-size:12px;color:var(--text2)"></div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:14px">
+          <div class="fg" style="margin-bottom:12px">
+            <label class="flbl">Asunto</label>
+            <input class="fi" id="email-subject" placeholder="Asunto del email">
+          </div>
+          <div class="fg">
+            <label class="flbl">Cuerpo del email (HTML)</label>
+            <textarea class="fta" id="email-body" style="min-height:200px;font-family:var(--fm);font-size:12px"></textarea>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+          <button class="btn btn-p" onclick="sendCurrentBatch()">📤 Enviar esta tanda (50)</button>
+          <button class="btn btn-g" onclick="copyEmailForClient()">📋 Copiar para tu cliente de email</button>
+          <button class="btn btn-g" onclick="nextBatch()">→ Siguiente tanda</button>
+          <button class="btn btn-g" onclick="genEmailCampaign()">↺ Regenerar con IA</button>
+        </div>
+        <!-- Batch list -->
+        <div class="sec-hdr"><div class="sec-title">Destinatarios de esta tanda</div></div>
+        <div id="email-batch-list" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);max-height:300px;overflow-y:auto"></div>
       </div>
     </div>
 
@@ -435,7 +521,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
           <div class="sc-title">📋 Configuración webhook</div>
           <div class="sc-sub">URL que Meta debe apuntar para recibir mensajes entrantes.</div>
           <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;font-family:var(--fm);color:var(--text2);word-break:break-all;margin-bottom:10px" id="webhookUrl">
-            https://TU-PROYECTO.vercel.app/api/webhook
+            https://prospector-crm-lac.vercel.app/api/webhook
           </div>
           <div class="fg"><label class="flbl">Verify Token (inventá uno)</label><input class="fi" id="cfg-verify-token" placeholder="mi_token_secreto_123" oninput="saveConfig()"></div>
           <button class="btn btn-g" style="width:100%" onclick="copyWebhook()">📋 Copiar URL webhook</button>
@@ -512,6 +598,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
         </div>
       </div>
       <div class="cfg-section">
+        <div class="cfg-title">SendGrid <span class="cfg-badge">Email masivo</span></div>
+        <div class="fg-row">
+          <div class="fg half"><label class="flbl">API Key SendGrid</label><input class="fi" type="password" id="cfg-sendgrid" placeholder="SG.xxx..." oninput="saveConfig()"></div>
+          <div class="fg half"><label class="flbl">Email remitente</label><input class="fi" id="cfg-from-email" placeholder="ventas@niviko.com" oninput="saveConfig()"></div>
+        </div>
+      </div>
+      <div class="cfg-section">
         <div class="cfg-title">Firebase Firestore <span class="cfg-badge">Base de datos</span></div>
         <div class="fg"><label class="flbl">Config JSON</label><textarea class="fta" id="cfg-firebase" placeholder='{"apiKey":"...","projectId":"...","storageBucket":"..."}' oninput="saveConfig()"></textarea></div>
       </div>
@@ -530,6 +623,74 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
       <div style="max-width:680px">
         <div class="sec-hdr"><div class="sec-title">Guía de setup completa</div></div>
         <div id="setupContent"></div>
+      </div>
+    </div>
+
+
+    <!-- TRAINING BOT -->
+    <div class="panel" id="panel-training">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+        <div class="scraper-card">
+          <div class="sc-title">🎓 Personalidad del bot</div>
+          <div class="sc-sub">Configurá cómo habla el bot. Cuanto más específico, más humano suena.</div>
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Empresa</label>
+            <select class="fs" id="train-co" onchange="loadPersona()">
+              <option value="niviko">NIVIKO</option>
+              <option value="broker">Broker Materiales</option>
+            </select>
+          </div>
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Nombre del bot</label>
+            <input class="fi" id="train-name" placeholder="ej: Lucía">
+          </div>
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Descripción de la empresa</label>
+            <textarea class="fta" id="train-company-desc" style="min-height:60px"></textarea>
+          </div>
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Tono y personalidad</label>
+            <textarea class="fta" id="train-tone" style="min-height:60px"></textarea>
+          </div>
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Reglas del bot</label>
+            <textarea class="fta" id="train-rules" style="min-height:90px"></textarea>
+          </div>
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Cuándo escalar al vendedor</label>
+            <textarea class="fta" id="train-escalate" style="min-height:60px"></textarea>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-p" style="flex:1" onclick="savePersona()">💾 Guardar</button>
+            <button class="btn btn-g" onclick="testPersona()">▶ Probar</button>
+          </div>
+        </div>
+        <div>
+          <div class="scraper-card" style="margin-bottom:14px">
+            <div class="sc-title">📋 Prompt activo</div>
+            <div class="sc-sub">Texto exacto que recibe el bot como instrucciones.</div>
+            <div id="train-preview" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;font-family:var(--fm);color:var(--text2);white-space:pre-wrap;min-height:180px;max-height:260px;overflow-y:auto">Completá los campos a la izquierda.</div>
+          </div>
+          <div class="scraper-card">
+            <div class="sc-title">💬 Preguntas frecuentes</div>
+            <div class="sc-sub">Preguntas y respuestas que el bot va a conocer de memoria.</div>
+            <div id="faq-list" style="max-height:160px;overflow-y:auto;margin-bottom:10px"></div>
+            <div class="fg-row">
+              <div class="fg half"><label class="flbl">Pregunta</label><input class="fi" id="faq-q" placeholder="ej: Hacen envios?"></div>
+              <div class="fg half"><label class="flbl">Respuesta</label><input class="fi" id="faq-a" placeholder="ej: Si, a todo el pais"></div>
+            </div>
+            <button class="btn btn-g" style="width:100%;margin-top:8px" onclick="addFAQ()">+ Agregar pregunta frecuente</button>
+          </div>
+        </div>
+      </div>
+      <div class="sec-hdr"><div class="sec-title">🧪 Probá el bot en tiempo real</div></div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px">
+        <div class="conv-wrap" id="trainConvWrap" style="min-height:120px"></div>
+        <div class="chat-input-row">
+          <input class="chat-in" id="trainChatIn" placeholder="Escribi como si fueras el prospecto..." onkeydown="if(event.key==='Enter')sendTrainSim()">
+          <button class="btn btn-p" onclick="sendTrainSim()">Probar</button>
+          <button class="btn btn-g" onclick="resetTrainSim()">Reset</button>
+        </div>
       </div>
     </div>
 
@@ -574,17 +735,104 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
   </div>
 </div>
 
+
+<!-- MODAL: Editar prospecto -->
+<div class="overlay" id="modal-editP">
+  <div class="modal" style="width:720px">
+    <button class="mclose" onclick="closeM('editP')">✕</button>
+    <input type="hidden" id="ep-id">
+    <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+      <div style="width:48px;height:48px;border-radius:12px;background:color-mix(in srgb,var(--accent) 15%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🏢</div>
+      <div style="flex:1">
+        <div class="modal-title" id="ep-title">Empresa</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px" id="ep-subtitle"></div>
+        <span class="sp s-nuevo" id="ep-status-pill" style="margin-top:6px;display:inline-flex">nuevo</span>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-g" id="ep-wa-link" style="font-size:12px">💬 WA</button>
+        <button class="btn btn-g" id="ep-mail-link" style="font-size:12px">📧 Email</button>
+        <button class="btn btn-g" id="ep-ig-link" style="font-size:12px">📷 IG</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px">
+      <div>
+        <div style="font-size:10px;font-family:var(--fm);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Información del contacto</div>
+        <div class="fg-row" style="margin-bottom:10px">
+          <div class="fg half"><label class="flbl">Empresa</label><input class="fi" id="ep-nombre"></div>
+          <div class="fg half"><label class="flbl">Contacto</label><input class="fi" id="ep-contacto"></div>
+        </div>
+        <div class="fg-row" style="margin-bottom:10px">
+          <div class="fg half"><label class="flbl">Teléfono / WA</label><input class="fi" id="ep-tel"></div>
+          <div class="fg half"><label class="flbl">Email</label><input class="fi" id="ep-email"></div>
+        </div>
+        <div class="fg-row" style="margin-bottom:10px">
+          <div class="fg half"><label class="flbl">Instagram</label><input class="fi" id="ep-ig"></div>
+          <div class="fg half"><label class="flbl">Zona</label><input class="fi" id="ep-zona"></div>
+        </div>
+        <div class="fg-row" style="margin-bottom:10px">
+          <div class="fg half"><label class="flbl">Rubro</label><select class="fs" id="ep-rubro"></select></div>
+          <div class="fg half"><label class="flbl">Estado</label>
+            <select class="fs" id="ep-estado">
+              <option value="nuevo">Nuevo</option>
+              <option value="contactado">Contactado</option>
+              <option value="interesado">Interesado</option>
+              <option value="cliente">Cliente</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg" style="margin-bottom:10px">
+          <label class="flbl">Rating <span id="ep-ratingVal" style="color:var(--accent-n)">0</span></label>
+          <input type="range" min="0" max="5" step="0.1" id="ep-rating" style="width:100%;accent-color:var(--accent-n)" oninput="document.getElementById('ep-ratingVal').textContent=parseFloat(this.value).toFixed(1)+' '+'★'.repeat(Math.floor(this.value))+'☆'.repeat(5-Math.floor(this.value))">
+        </div>
+        <div class="fg">
+          <label class="flbl">Notas</label>
+          <textarea class="fta" id="ep-notas" style="min-height:90px"></textarea>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-family:var(--fm);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Historial</div>
+        <div id="ep-conv-history" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:120px;max-height:180px;overflow-y:auto;font-size:12px;line-height:1.7;margin-bottom:14px"></div>
+        <div style="font-size:10px;font-family:var(--fm);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Acciones rápidas</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <button class="btn btn-g" style="justify-content:flex-start" onclick="closeM('editP');showPanel('mensajes');setNav('mensajes')">✦ Generar mensaje IA</button>
+          <button class="btn btn-g" style="justify-content:flex-start" onclick="closeM('editP');openBotSim(parseInt(document.getElementById('ep-id').value))">🤖 Simular bot</button>
+          <button class="btn btn-g" style="justify-content:flex-start" onclick="enrichProspect(parseInt(document.getElementById('ep-id').value))">🔍 Enriquecer con Maps/Web</button>
+          <button class="btn btn-g" style="justify-content:flex-start" onclick="openWA(document.getElementById('ep-tel').value)" id="ep-open-wa">💬 Abrir WhatsApp</button>
+        </div>
+      </div>
+    </div>
+    <div class="mfooter" style="justify-content:space-between">
+      <button class="btn btn-r" onclick="if(confirm('Eliminar este prospecto?'))deleteProspect()">🗑 Eliminar</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-g" onclick="closeM('editP')">Cancelar</button>
+        <button class="btn btn-p" onclick="saveEditP()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Duplicados -->
+<div class="overlay" id="modal-dupes">
+  <div class="modal" style="width:700px">
+    <button class="mclose" onclick="closeM('dupes')">✕</button>
+    <div class="modal-title">🔍 Revisar duplicados</div>
+    <div class="modal-sub" id="dupes-count">Analizando...</div>
+    <div id="dupes-list" style="max-height:460px;overflow-y:auto"></div>
+    <div class="mfooter"><button class="btn btn-g" onclick="closeM('dupes')">Cerrar</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 // ═══════════════════════════════════════════════
 // DATA & STATE
 // ═══════════════════════════════════════════════
-const RUBROS = {
+var RUBROS = {
   niviko:['Art. del Hogar','Mueblería','Retail / Bazar','Supermercado','Arquitecto interiores','Distribuidor','E-commerce','Otro'],
   broker:['Desarrolladora','Constructora','Arquitecto independiente','Estudio de arquitectura','Reformista','Ferretería / Corralón','Instalador','Otro']
 };
-const DEMO = {
+var DEMO = {
   niviko:[
     {id:1,nombre:'Casa del Confort',rubro:'Art. del Hogar',zona:'Flores, CABA',tel:'5491165432100',email:'ventas@casadelconfort.com',ig:'@casadelconfort',estado:'interesado',rating:4.3,notas:'Interesados en sillas de oficina.',contacto:'Marcelo',msgs:0,canal:'whatsapp'},
     {id:2,nombre:'Muebles Belgrano',rubro:'Mueblería',zona:'Belgrano, CABA',tel:'5491144332211',email:'',ig:'@mueblesbelgrano',estado:'contactado',rating:4.7,notas:'',contacto:'',msgs:1,canal:'whatsapp'},
@@ -598,7 +846,7 @@ const DEMO = {
     {id:12,nombre:'Construye BA',rubro:'Constructora',zona:'Villa del Parque, CABA',tel:'5491133445566',email:'',ig:'',estado:'contactado',rating:3.8,notas:'5 obras activas.',contacto:'',msgs:1,canal:'whatsapp'},
   ]
 };
-const PERSONAS = {
+var PERSONAS = {
   lucia_niviko: `Sos Lucía, asesora comercial de NIVIKO, importadora y distribuidora líder de muebles, sillas, artículos del hogar y electrónica en Argentina. Tenemos más de 150 SKUs, somos MercadoLíder y trabajamos con las cadenas más grandes del país.
 
 PERSONALIDAD: Directa, simpática, sin vueltas. Nunca decís "estimado cliente" ni usás lenguaje corporativo. Hablás como una persona real, en primera persona. Usás el nombre del negocio cuando lo sabés.
@@ -641,6 +889,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   updateApiDots();
   renderSetupGuide();
   initSim();
+  customPersonas=JSON.parse(localStorage.getItem('crm_personas')||'{}');faqs=JSON.parse(localStorage.getItem('crm_faqs')||'{}');
   document.getElementById('bot-persona').addEventListener('change',e=>{
     document.getElementById('customPersonaWrap').style.display = e.target.value==='custom'?'block':'none';
   });
@@ -654,7 +903,8 @@ function renderAll(){
 // ═══════════════════════════════════════════════
 // COMPANY SWITCH
 // ═══════════════════════════════════════════════
-function switchCo(co){
+function switchCo(co){switchCompany(co);}
+function switchCompany(co){
   ST.co=co;
   document.body.className=co==='broker'?'broker':'';
   document.querySelectorAll('.co-tab').forEach(t=>t.classList.toggle('active',t.dataset.co===co));
@@ -671,17 +921,19 @@ function showPanel(n){
   ST.panel=n;
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+n).classList.add('active');
-  const t={dashboard:'Dashboard',prospectos:'Prospectos',pipeline:'Pipeline',scraper:'Scraper Maps',importar:'Importar Contactos',mensajes:'Mensajes IA',bot:'Bot WhatsApp',reportes:'Reportes',config:'Configuración',setup:'Guía de Setup'};
+  const t={dashboard:'Dashboard',prospectos:'Prospectos',pipeline:'Pipeline',scraper:'Scraper Maps',importar:'Importar Contactos',emails:'Campañas Email',mensajes:'Mensajes IA',training:'Entrenar Bot',bot:'Bot WhatsApp',reportes:'Reportes',config:'Configuración',setup:'Guía de Setup'};
   document.getElementById('panelTitle').textContent=t[n]||n;
   setNav(n);
   if(n==='mensajes')populateMsgSelect();
+  if(n==='emails')initEmailPanel();
+  if(n==='training'){loadPersona();resetTrainSim();customPersonas=JSON.parse(localStorage.getItem('crm_personas')||'{}');faqs=JSON.parse(localStorage.getItem('crm_faqs')||'{}');loadPersona();}
   if(n==='reportes')renderReports();
   if(n==='bot'){populateSimSelect();renderActiveConvs();}
   if(n==='scraper')populateScraperRubros();
 }
 function setNav(n){
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
-  const map={dashboard:0,prospectos:1,pipeline:2,scraper:3,importar:4,mensajes:5,bot:6,reportes:7,config:8,setup:9};
+  const map={dashboard:0,prospectos:1,pipeline:2,scraper:3,importar:4,emails:5,mensajes:6,training:7,bot:8,reportes:9,config:10,setup:11};
   const items=document.querySelectorAll('.nav-item');
   if(items[map[n]])items[map[n]].classList.add('active');
 }
@@ -726,27 +978,141 @@ function renderP(){
   b.innerHTML=ps.length?ps.map(pRow).join(''):'<div style="padding:22px;text-align:center;color:var(--text3)">No hay prospectos con ese filtro.</div>';
 }
 
+function mkBtn(cls,icon,onclick,dataKey,dataVal){
+  return '<button class="'+cls+'" data-'+dataKey+'="'+dataVal+'" onclick="event.stopPropagation();'+onclick+'">'+icon+'</button>';
+}
 function pRow(p){
-  const sc={nuevo:'s-nuevo',contactado:'s-contactado',interesado:'s-interesado',cliente:'s-cliente'};
-  const stars='★'.repeat(Math.floor(p.rating||0))+'☆'.repeat(5-Math.floor(p.rating||0));
-  const waBtn=p.tel?`<div class="abt wa" title="WhatsApp" onclick="event.stopPropagation();openWA('${p.tel}')">💬</div>`:'';
-  const mailBtn=p.email?`<div class="abt ml" title="Email" onclick="event.stopPropagation();openMail('${p.email}')">📧</div>`:'';
-  const igBtn=p.ig?`<div class="abt ig" title="Instagram" onclick="event.stopPropagation();openIG('${p.ig}')">📷</div>`:'';
-  const botBtn=`<div class="abt bot" title="Simular bot" onclick="event.stopPropagation();openBotSim(${p.id})">🤖</div>`;
-  return `<div class="tbl-row" onclick="showProspect(${p.id})">
-    <div class="p-name">${p.nombre}<small>${p.contacto||''}</small></div>
-    <div><span class="rubro-pill">${p.rubro}</span></div>
-    <div class="zona col-zona">${p.zona||'—'}</div>
-    <div class="rating col-rating"><span class="stars">${stars}</span> ${p.rating||'—'}</div>
-    <div><span class="sp ${sc[p.estado]||''}">${p.estado}</span></div>
-    <div class="act-btns">${waBtn}${mailBtn}${igBtn}${botBtn}</div>
-  </div>`;
+  var sc={nuevo:'s-nuevo',contactado:'s-contactado',interesado:'s-interesado',cliente:'s-cliente'};
+  var stars='★'.repeat(Math.floor(p.rating||0))+'☆'.repeat(5-Math.floor(p.rating||0));
+  var waBtn=p.tel?mkBtn('abt wa','💬','openWA(this.dataset.tel)','tel',p.tel):'';
+  var mailBtn=p.email?mkBtn('abt ml','📧','openMail(this.dataset.email)','email',p.email):'';
+  var igBtn=p.ig?mkBtn('abt ig','📷','openIG(this.dataset.ig)','ig',p.ig):'';
+  var botBtn=mkBtn('abt bot','🤖','event.stopPropagation();openBotSim(parseInt(this.dataset.id))','id',p.id);
+  return '<div class="tbl-row" data-id="'+p.id+'" onclick="showProspect(parseInt(this.dataset.id))">'
+    +'<div class="p-name">'+p.nombre+'<small>'+(p.contacto||'')+'</small></div>'
+    +'<div><span class="rubro-pill">'+(p.rubro||'')+'</span></div>'
+    +'<div class="zona col-zona">'+(p.zona||'—')+'</div>'
+    +'<div class="rating col-rating"><span class="stars">'+stars+'</span> '+(p.rating||'—')+'</div>'
+    +'<div><span class="sp '+(sc[p.estado]||'')+'">'+p.estado+'</span></div>'
+    +'<div class="act-btns">'+waBtn+mailBtn+igBtn+botBtn+'</div>'
+    +'</div>';
 }
 
 function showProspect(id){
   const p=getP().find(x=>x.id===id);
   if(!p)return;
-  toast(`📋 ${p.nombre} — ${p.rubro} · ${p.zona||'sin zona'}`);
+  // Populate edit modal
+  const sc={nuevo:'s-nuevo',contactado:'s-contactado',interesado:'s-interesado',cliente:'s-cliente'};
+  const stars='★'.repeat(Math.floor(p.rating||0))+'☆'.repeat(5-Math.floor(p.rating||0));
+  document.getElementById('ep-id').value=id;
+  document.getElementById('ep-nombre').value=p.nombre||'';
+  document.getElementById('ep-contacto').value=p.contacto||'';
+  document.getElementById('ep-tel').value=p.tel||'';
+  document.getElementById('ep-email').value=p.email||'';
+  document.getElementById('ep-ig').value=p.ig||'';
+  document.getElementById('ep-zona').value=p.zona||'';
+  document.getElementById('ep-notas').value=p.notas||'';
+  document.getElementById('ep-rating').value=p.rating||0;
+  document.getElementById('ep-ratingVal').textContent=`${p.rating||0} ${stars}`;
+  // Populate selects
+  const rubroSel=document.getElementById('ep-rubro');
+  rubroSel.innerHTML=RUBROS[ST.co].map(r=>`<option value="${r}" ${r===p.rubro?'selected':''}>${r}</option>`).join('');
+  const estadoSel=document.getElementById('ep-estado');
+  ['nuevo','contactado','interesado','cliente'].forEach(e=>{
+    estadoSel.querySelector(`option[value="${e}"]`).selected=e===p.estado;
+  });
+  // Header info
+  document.getElementById('ep-title').textContent=p.nombre;
+  document.getElementById('ep-subtitle').textContent=`${p.rubro} · ${p.zona||'sin zona'}`;
+  const pill=document.getElementById('ep-status-pill');
+  pill.className=`sp ${sc[p.estado]||''}`;pill.textContent=p.estado;
+  // Quick actions
+  const waLink=document.getElementById('ep-wa-link');
+  const mailLink=document.getElementById('ep-mail-link');
+  const igLink=document.getElementById('ep-ig-link');
+  waLink.style.display=p.tel?'inline-flex':'none';
+  mailLink.style.display=p.email?'inline-flex':'none';
+  igLink.style.display=p.ig?'inline-flex':'none';
+  waLink.onclick=()=>openWA(p.tel);
+  mailLink.onclick=()=>openMail(p.email);
+  igLink.onclick=()=>openIG(p.ig);
+  // Conversation history
+  const convs=ST.convHistory[id]||[];
+  const convEl=document.getElementById('ep-conv-history');
+  convEl.innerHTML=convs.length
+    ? convs.map(m=>`<div style="margin-bottom:6px;font-size:12px"><span style="color:${m.role==='bot'?'var(--accent)':'var(--text2)'}">${m.role==='bot'?'Bot':'Cliente'}:</span> ${m.txt}</div>`).join('')
+    : '<div style="color:var(--text3);font-size:12px">Sin conversaciones registradas aún.</div>';
+  openM('editP');
+}
+
+function saveEditP(){
+  const id=parseInt(document.getElementById('ep-id').value);
+  const ps=getP();
+  const idx=ps.findIndex(x=>x.id===id);
+  if(idx===-1)return;
+  ps[idx]={
+    ...ps[idx],
+    nombre:document.getElementById('ep-nombre').value.trim(),
+    contacto:document.getElementById('ep-contacto').value.trim(),
+    tel:document.getElementById('ep-tel').value.replace(/\D/g,''),
+    email:document.getElementById('ep-email').value.trim(),
+    ig:document.getElementById('ep-ig').value.trim(),
+    zona:document.getElementById('ep-zona').value.trim(),
+    rubro:document.getElementById('ep-rubro').value,
+    estado:document.getElementById('ep-estado').value,
+    notas:document.getElementById('ep-notas').value.trim(),
+    rating:parseFloat(document.getElementById('ep-rating').value)||0,
+  };
+  saveP_data(ps);renderAll();closeM('editP');
+  toast('✅ Prospecto actualizado');
+}
+
+function deleteProspect(){
+  const id=parseInt(document.getElementById('ep-id').value);
+  const ps=getP().filter(x=>x.id!==id);
+  saveP_data(ps);renderAll();closeM('editP');
+  toast('🗑 Prospecto eliminado');
+}
+
+// DUPLICADOS
+function checkDuplicates(){
+  const ps=getP();
+  const groups={};
+  ps.forEach(p=>{
+    const key=p.nombre.toLowerCase().trim().replace(/\s+/g,' ');
+    if(!groups[key])groups[key]=[];
+    groups[key].push(p);
+  });
+  const dupes=Object.entries(groups).filter(([_,g])=>g.length>1);
+  if(!dupes.length){toast('✅ No se encontraron duplicados');return;}
+
+  var el=document.getElementById('dupes-list');
+  var html='';
+  dupes.forEach(function(entry){
+    var key=entry[0], group=entry[1];
+    html+='<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:10px;">';
+    html+='<div style="font-size:13px;font-weight:500;margin-bottom:8px;color:var(--orange)">⚠ '+group[0].nombre+' — '+group.length+' registros</div>';
+    group.forEach(function(p){
+      var sc=p.estado==='nuevo'?'s-nuevo':p.estado==='cliente'?'s-cliente':'s-contactado';
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2)">';
+      html+='<span style="flex:1">'+p.nombre+' · '+(p.zona||'sin zona')+' · '+(p.tel||'sin tel')+' · '+(p.email||'sin email')+'</span>';
+      html+='<span class="sp '+sc+'">'+p.estado+'</span>';
+      html+=mkBtn('btn btn-g','✏ Editar','showProspect(parseInt(this.dataset.id));closeM(\'dupes\')','id',p.id);
+      html+=mkBtn('btn btn-r','🗑','deleteById(parseInt(this.dataset.id))','id',p.id);
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
+  document.getElementById('dupes-count').textContent=dupes.length+' grupos · '+dupes.reduce(function(a,b){return a+b[1].length-1;},0)+' posibles duplicados';
+  openM('dupes');
+}
+
+function deleteById(id){
+  const ps=getP().filter(x=>x.id!==id);
+  saveP_data(ps);renderAll();
+  toast('🗑 Eliminado');
+  checkDuplicates();
 }
 
 // ═══════════════════════════════════════════════
@@ -790,14 +1156,15 @@ function renderDashRecent(){
 function populateRubros(){
   const rs=RUBROS[ST.co];
   const fCont=document.getElementById('rubroFtrs');
-  if(fCont)fCont.innerHTML=rs.map(r=>`<button class="fbtn" data-r="${r}" onclick="setFR(this,'${r}')">${r}</button>`).join('');
+  if(fCont)fCont.innerHTML=rs.map(function(r){return '<button class="fbtn" data-r="'+r+'" onclick="setFR(this,this.dataset.r)">'+r+'</button>';}).join('');
   const fR=document.getElementById('f-rubro');
   if(fR)fR.innerHTML=rs.map(r=>`<option value="${r}">${r}</option>`).join('');
 }
 function populateScraperRubros(){
   const sel=document.getElementById('sc-rubro');
-  if(!sel)return;
-  sel.innerHTML='<option value="">Seleccionar...</option>'+RUBROS[ST.co].map(r=>`<option value="${r}">${r}</option>`).join('');
+  if(sel)sel.innerHTML='<option value="">Seleccionar...</option>'+RUBROS[ST.co].map(r=>`<option value="${r}">${r}</option>`).join('');
+  const sel2=document.getElementById('sc-rubro-nacional');
+  if(sel2)sel2.innerHTML='<option value="">Seleccionar...</option>'+RUBROS[ST.co].map(r=>`<option value="${r}">${r}</option>`).join('');
 }
 
 // ═══════════════════════════════════════════════
@@ -829,64 +1196,207 @@ function saveP(){
 // ═══════════════════════════════════════════════
 // SCRAPER (Google Maps)
 // ═══════════════════════════════════════════════
+// ── ARGENTINA: todas las provincias ──
+var AR_PROVINCES = [
+  {name:'Buenos Aires',lat:-34.6037,lng:-58.3816},
+  {name:'Córdoba',lat:-31.4201,lng:-64.1888},
+  {name:'Rosario',lat:-32.9442,lng:-60.6505},
+  {name:'Mendoza',lat:-32.8908,lng:-68.8272},
+  {name:'Tucumán',lat:-26.8083,lng:-65.2176},
+  {name:'La Plata',lat:-34.9205,lng:-57.9536},
+  {name:'Mar del Plata',lat:-38.0055,lng:-57.5426},
+  {name:'Salta',lat:-24.7859,lng:-65.4116},
+  {name:'Santa Fe',lat:-31.6333,lng:-60.7000},
+  {name:'San Juan',lat:-31.5375,lng:-68.5364},
+  {name:'Resistencia',lat:-27.4606,lng:-58.9867},
+  {name:'Corrientes',lat:-27.4692,lng:-58.8306},
+  {name:'Posadas',lat:-27.3671,lng:-55.8968},
+  {name:'Neuquén',lat:-38.9516,lng:-68.0591},
+  {name:'San Luis',lat:-33.2960,lng:-66.3356},
+  {name:'La Rioja',lat:-29.4130,lng:-66.8560},
+  {name:'Catamarca',lat:-28.4696,lng:-65.7852},
+  {name:'Jujuy',lat:-24.1858,lng:-65.2995},
+  {name:'Formosa',lat:-26.1775,lng:-58.1781},
+  {name:'Santiago del Estero',lat:-27.7951,lng:-64.2615},
+  {name:'Rawson',lat:-43.3002,lng:-65.1023},
+  {name:'Viedma',lat:-40.8135,lng:-62.9967},
+  {name:'Santa Rosa',lat:-36.6167,lng:-64.2833},
+  {name:'Paraná',lat:-31.7333,lng:-60.5333},
+  {name:'Bahía Blanca',lat:-38.7196,lng:-62.2724},
+];
+
+let scraperPageToken = null;
+let scraperAllResults = [];
+let scraperCurrentRubro = '';
+let nationalScanActive = false;
+let nationalScanIndex = 0;
+let nationalScanResults = [];
+
 function runScraper(){
   const zona=document.getElementById('sc-zona').value;
   const rubro=document.getElementById('sc-rubro').value;
   if(!rubro){toast('⚠️ Seleccioná un rubro');return;}
   const mapsKey=ST.cfg['cfg-maps'];
   if(!mapsKey){toast('⚠️ Configurá tu Google Maps API Key en Configuración');return;}
+  scraperAllResults=[];scraperPageToken=null;scraperCurrentRubro=rubro;
   toast('🔍 Buscando en '+zona+'...');
-  // Llamada real a Places API a través del proxy de Vercel
-  const query=encodeURIComponent(rubro+' en '+zona);
-  fetch(`/api/maps?query=${query}&key=${mapsKey}`)
-    .then(r=>r.json())
-    .then(data=>{
-      if(data.results){renderScraperResults(data.results,rubro);}
-      else{simulateScraper(zona,rubro);}
-    })
-    .catch(()=>simulateScraper(zona,rubro));
+  fetchMapsPage(rubro, zona, null, mapsKey);
 }
 
-function simulateScraper(zona,rubro){
-  // Demo cuando no hay proxy conectado
-  const demo=[
-    {nombre:`${rubro} Centro ${zona}`,zona,tel:'5491155667788',rating:4.2,website:'www.ejemplo.com'},
-    {nombre:`Gran ${rubro} ${zona}`,zona,tel:'5491144556677',rating:3.8,website:''},
-    {nombre:`${rubro} del Norte`,zona,tel:'5491133445566',rating:4.5,website:'www.norte.com.ar'},
-    {nombre:`Distribuidora ${rubro}`,zona,tel:'5491122334455',rating:4.0,website:''},
-  ];
-  renderScraperResults(demo,rubro);
+async function fetchMapsPage(rubro, zona, pagetoken, mapsKey){
+  try {
+    let url = `/api/maps?query=${encodeURIComponent(rubro+' '+zona)}&key=${mapsKey}`;
+    if(pagetoken) url += `&pagetoken=${encodeURIComponent(pagetoken)}`;
+    const r = await fetch(url);
+    const data = await r.json();
+    if(data.results && data.results.length){
+      scraperAllResults = [...scraperAllResults, ...data.results];
+      renderScraperResults(scraperAllResults, rubro, zona);
+      // Auto-fetch next page if available (max 3 pages = 60 results)
+      if(data.next_page_token && scraperAllResults.length < 60){
+        toast(`🔍 Cargando más... (${scraperAllResults.length} hasta ahora)`);
+        await new Promise(r=>setTimeout(r,2200)); // Maps requires 2s delay between pages
+        fetchMapsPage(rubro, zona, data.next_page_token, mapsKey);
+      } else {
+        toast(`✅ ${scraperAllResults.length} resultados encontrados`);
+      }
+    } else {
+      if(scraperAllResults.length===0){
+        toast('⚠️ No se encontraron resultados. Probá con otro rubro o zona.');
+        renderScraperResults([], rubro, zona);
+      }
+    }
+  } catch(e){
+    toast('⚠️ Error conectando con Maps. Verificá tu API key en Configuración.');
+    console.error(e);
+  }
 }
 
-function renderScraperResults(results,rubro){
-  ST.scraperResults=results.map((r,i)=>({...r,rubro,id:'sc_'+Date.now()+'_'+i}));
+async function runNationalScan(){
+  const rubro=document.getElementById('sc-rubro').value;
+  if(!rubro){toast('⚠️ Seleccioná un rubro primero');return;}
+  const mapsKey=ST.cfg['cfg-maps'];
+  if(!mapsKey){toast('⚠️ Configurá tu Google Maps API Key');return;}
+  if(!confirm(`¿Iniciar escaneo nacional de "${rubro}" en ${AR_PROVINCES.length} ciudades? Puede tardar varios minutos.`)) return;
+  
+  nationalScanActive=true;nationalScanIndex=0;nationalScanResults=[];
+  document.getElementById('national-scan-status').style.display='block';
+  document.getElementById('national-scan-stop').style.display='inline-flex';
+  
+  for(let i=0; i<AR_PROVINCES.length && nationalScanActive; i++){
+    const prov = AR_PROVINCES[i];
+    nationalScanIndex=i;
+    document.getElementById('national-scan-prog').textContent=`Escaneando: ${prov.name} (${i+1}/${AR_PROVINCES.length}) · ${nationalScanResults.length} encontrados`;
+    document.getElementById('national-scan-bar').style.width=`${((i+1)/AR_PROVINCES.length*100).toFixed(0)}%`;
+    try {
+      const url=`/api/maps?query=${encodeURIComponent(rubro)}&key=${mapsKey}&lat=${prov.lat}&lng=${prov.lng}&radius=30000`;
+      const r=await fetch(url);const data=await r.json();
+      if(data.results){
+        nationalScanResults=[...nationalScanResults,...data.results.map(x=>({...x,scanCity:prov.name}))];
+      }
+    } catch(e){ console.error('Error en',prov.name,e); }
+    await new Promise(r=>setTimeout(r,300)); // Rate limit
+  }
+  nationalScanActive=false;
+  document.getElementById('national-scan-stop').style.display='none';
+  document.getElementById('national-scan-prog').textContent=`✅ Escaneo completo: ${nationalScanResults.length} negocios en todo el país`;
+  scraperAllResults=nationalScanResults;scraperCurrentRubro=rubro;
+  renderScraperResults(nationalScanResults, rubro, 'Argentina');
+  toast(`✅ Escaneo nacional: ${nationalScanResults.length} resultados`);
+}
+
+function stopNationalScan(){
+  nationalScanActive=false;
+  toast('⏹ Escaneo detenido');
+  document.getElementById('national-scan-stop').style.display='none';
+}
+
+function renderScraperResults(results,rubro,zona){
+  ST.scraperResults=results.map(function(r,i){return Object.assign({},r,{rubro:rubro||r.rubro,id:'sc_'+Date.now()+'_'+i});});
   document.getElementById('scraperRes').style.display='block';
   document.getElementById('sc-cnt').textContent=results.length+' encontrados';
-  document.getElementById('scraperResBody').innerHTML=`<div class="tbl">
-    <div class="tbl-hdr" style="grid-template-columns:2fr 1fr 1fr 1fr 90px"><div>Nombre</div><div>Zona</div><div>Teléfono</div><div>Rating</div><div>Acción</div></div>
-    ${results.map((r,i)=>`<div class="tbl-row" style="grid-template-columns:2fr 1fr 1fr 1fr 90px">
-      <div class="p-name">${r.nombre}</div>
-      <div class="zona">${r.zona||zona}</div>
-      <div class="zona">${r.tel||'—'}</div>
-      <div class="rating">${r.rating||'—'} <span class="stars">★</span></div>
-      <div><button class="btn btn-g" style="font-size:11px;padding:4px 9px" onclick='importOne(${i},"${rubro}")'>+ Agregar</button></div>
-    </div>`).join('')}
-  </div>`;
+  var html='<div class="tbl">';
+  html+='<div class="tbl-hdr" style="grid-template-columns:2fr 1.2fr 1fr 1fr 1fr 0.8fr 110px">';
+  html+='<div>Negocio</div><div>Zona</div><div>Teléfono</div><div>WhatsApp</div><div>Email / IG</div><div>Rating</div><div>Acciones</div></div>';
+  results.forEach(function(r,i){
+    var z=r.zona||zona||'';
+    var tel=r.tel||'—';
+    var wa=r.whatsapp?('<span style="color:var(--green);font-size:11px">✅ ...'+r.whatsapp.slice(-6)+'</span>'):'<span style="color:var(--text3)">—</span>';
+    var em=r.email?('<span style="color:var(--green);font-size:10px">✅ '+r.email.slice(0,20)+'</span>'):(r.instagram?'<span style="color:#e1306c;font-size:10px">'+r.instagram+'</span>':'<span style="color:var(--text3)">—</span>');
+    var stars=r.rating?(r.rating+'★'):'—';
+    var web=r.website?('<a href="'+r.website+'" target="_blank" style="color:var(--accent);font-size:10px;display:block">🌐 web</a>'):'';
+    var enrichBtn=(!r.whatsapp&&!r.email&&r.place_id)?('<button class="abt" title="Buscar más datos" data-idx="'+i+'" onclick="enrichOne(parseInt(this.dataset.idx))" style="font-size:11px">🔍</button>'):'';
+    var importBtn='<button class="btn btn-g" style="font-size:11px;padding:4px 8px" data-idx="'+i+'" data-rubro="'+rubro+'" onclick="importOne(parseInt(this.dataset.idx),this.dataset.rubro)">+ CRM</button>';
+    var bg=i%2?'background:var(--bg3)':'';
+    html+='<div class="tbl-row" style="grid-template-columns:2fr 1.2fr 1fr 1fr 1fr 0.8fr 110px;'+bg+'">';
+    html+='<div class="p-name">'+r.nombre+web+'</div>';
+    html+='<div class="zona" style="font-size:11px">'+z+'</div>';
+    html+='<div class="zona">'+tel+'</div>';
+    html+='<div>'+wa+'</div>';
+    html+='<div>'+em+'</div>';
+    html+='<div class="rating">'+stars+'</div>';
+    html+='<div style="display:flex;gap:3px">'+enrichBtn+importBtn+'</div>';
+    html+='</div>';
+  });
+  html+='</div>';
+  document.getElementById('scraperResBody').innerHTML=html;
   toast('✅ '+results.length+' resultados encontrados');
+}
+async function enrichOne(i){
+  var r=ST.scraperResults[i];
+  if(!r||!r.place_id)return;
+  var mapsKey=ST.cfg['cfg-maps'];
+  if(!mapsKey)return;
+  toast('🔍 Buscando más datos para '+r.nombre+'...');
+  try{
+    var res=await fetch('/api/maps?enrich=true&place_id='+encodeURIComponent(r.place_id)+'&key='+mapsKey);
+    var data=await res.json();
+    if(data){
+      ST.scraperResults[i]=Object.assign({},ST.scraperResults[i],data);
+      renderScraperResults(ST.scraperResults,r.rubro,'');
+      toast('✅ Datos actualizados para '+r.nombre);
+    }
+  }catch(e){toast('⚠ Error: '+e.message);}
 }
 
 function importOne(i,rubro){
   const r=ST.scraperResults[i];
   const ps=getP();
-  if(ps.find(p=>p.nombre===r.nombre)){toast('⚠️ Ya existe: '+r.nombre);return;}
-  ps.unshift({id:Date.now(),nombre:r.nombre,rubro,zona:r.zona||'',tel:r.tel||'',email:'',ig:'',estado:'nuevo',rating:r.rating||0,notas:'Importado desde Google Maps',contacto:'',msgs:0,canal:'',created:Date.now()});
+  if(ps.find(p=>p.nombre===r.nombre)){toast('⚠ Ya existe: '+r.nombre);return;}
+  ps.unshift({
+    id:Date.now(),
+    nombre:r.nombre,
+    rubro:rubro||r.rubro||RUBROS[ST.co][0],
+    zona:r.zona||'',
+    tel:r.tel||'',
+    WhatsApp:r.whatsapp||'',
+    email:r.email||'',
+    ig:r.instagram||'',
+    website:r.website||'',
+    estado:'nuevo',
+    rating:r.rating||0,
+    reviews:r.reviews||0,
+    notas:'Importado desde Google Maps'+(r.website?' · Web: '+r.website:''),
+    contacto:'',
+    msgs:0,canal:'',
+    place_id:r.place_id||'',
+    created:Date.now()
+  });
   saveP_data(ps);renderAll();
-  document.getElementById('sc-imported').textContent=parseInt(document.getElementById('sc-imported').textContent||'0')+1;
-  toast('✅ '+r.nombre+' importado');
+  const imp=document.getElementById('sc-imported');
+  if(imp)imp.textContent=parseInt(imp.textContent||'0')+1;
+  toast('✅ '+r.nombre+' importado con todos los datos');
 }
 function importAllScraper(){
-  ST.scraperResults.forEach((_,i)=>importOne(i,ST.scraperResults[i]?.rubro||''));
-  toast('✅ Todos los resultados importados');
+  let count=0;
+  ST.scraperResults.forEach((_,i)=>{
+    const r=ST.scraperResults[i];
+    if(!getP().find(p=>p.nombre===r.nombre)){
+      importOne(i,r.rubro||scraperCurrentRubro||'');
+      count++;
+    }
+  });
+  toast('✅ '+count+' importados ('+( ST.scraperResults.length-count)+' ya existían)');
 }
 
 // ═══════════════════════════════════════════════
@@ -920,7 +1430,7 @@ function handleFile(file){
 }
 
 function parseCSV(txt){
-  return txt.split('\n').map(l=>l.split(',').map(c=>c.trim().replace(/^"|"$/g,'')));
+  return txt.split('\n').map(function(l){return l.split(',').map(function(c){return c.trim().replace(/^["']|["']$/g,'');});});
 }
 
 function previewImport(rows,fname){
@@ -1036,10 +1546,10 @@ async function genMsg(){
   out.innerHTML='<div class="ai-dots"><div class="dot-anim"></div><div class="dot-anim"></div><div class="dot-anim"></div><span style="margin-left:6px">Generando...</span></div>';
   ['btnWA','btnMail','btnCopy'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('/api/claude',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,messages:[{role:'user',content:prompt}]})
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,apiKey:ST.cfg['cfg-claude'],messages:[{role:'user',content:prompt}]})
     });
     const data=await res.json();
     if(data.error)throw new Error(data.error.message);
@@ -1058,6 +1568,227 @@ function sendWA(){const id=document.getElementById('msgP').value;const p=getP().
 function sendMail(){const id=document.getElementById('msgP').value;const p=getP().find(x=>String(x.id)===String(id));if(p?.email){const lines=ST.genMsg.split('\n');window.open(`mailto:${p.email}?subject=${encodeURIComponent(lines[0]||'Mensaje')}&body=${encodeURIComponent(ST.genMsg)}`);}}
 function copyMsg(){navigator.clipboard.writeText(ST.genMsg).then(()=>toast('📋 Copiado'));}
 
+
+// ═══════════════════════════════════════════════
+// BOT TRAINING
+// ═══════════════════════════════════════════════
+var DEFAULT_PERSONAS = {
+  niviko: {
+    name: 'Lucía',
+    companyDesc: 'importadora y distribuidora mayorista de muebles, sillas de oficina, artículos del hogar y electrónica. MercadoLíder con 8+ años en el mercado, 150+ SKUs.',
+    tone: 'Directa, simpática, sin vueltas. Nunca "estimado cliente". Hablás como una persona real, en primera persona. Usás el nombre del negocio cuando lo sabés.',
+    rules: 'Nunca más de 3 oraciones por mensaje.\nSi no sabés algo: "te consulto y te confirmo".\nSi preguntan precio: ofrecés lista mayorista por WhatsApp.\nCerrás amablemente si no hay interés.\nUsás emojis con moderación (máximo 1 por mensaje).\nNo uses asteriscos ni markdown.',
+    escalate: 'Después de 3 intercambios con interés real.\nSi piden reunión o visita.\nSi preguntan por cantidades grandes.'
+  },
+  broker: {
+    name: 'Martín',
+    companyDesc: 'broker de materiales de construcción y terminaciones premium para desarrollos inmobiliarios. Porcelanato, microcemento, madera, piedra.',
+    tone: 'Profesional pero cercano. Sabés de obra y de planos. Hablás con desarrolladores y arquitectos de igual a igual. Conciso y vas al punto.',
+    rules: 'Nunca más de 3 oraciones por mensaje.\nNo das precios por WhatsApp: ofrecés visita técnica o cotización formal.\nSiempre cerrás con el próximo paso concreto.\nNo uses asteriscos ni markdown.',
+    escalate: 'Si es una desarrolladora importante (más de 3 proyectos).\nSi piden cotización formal.\nSi preguntan por plazos de entrega.'
+  }
+};
+
+var customPersonas = {};
+var faqs = {};
+var trainHistory = [];
+
+function loadPersona(){
+  var co = document.getElementById('train-co').value;
+  var saved = customPersonas[co];
+  var p = saved || DEFAULT_PERSONAS[co];
+  document.getElementById('train-name').value = p.name || '';
+  document.getElementById('train-company-desc').value = p.companyDesc || '';
+  document.getElementById('train-tone').value = p.tone || '';
+  document.getElementById('train-rules').value = p.rules || '';
+  document.getElementById('train-escalate').value = p.escalate || '';
+  updatePromptPreview();
+  renderFAQs();
+}
+
+function updatePromptPreview(){
+  var co = document.getElementById('train-co').value;
+  var name = document.getElementById('train-name').value;
+  var desc = document.getElementById('train-company-desc').value;
+  var tone = document.getElementById('train-tone').value;
+  var rules = document.getElementById('train-rules').value;
+  var escalate = document.getElementById('train-escalate').value;
+  var coName = co === 'niviko' ? 'NIVIKO' : 'Broker Materiales';
+  var faqList = (faqs[co] || []).map(function(f,i){return (i+1)+'. P: '+f.q+'\n   R: '+f.a;}).join('\n');
+  var preview = 'Sos '+name+', asesor/a de '+coName+'\n'+desc+'\n\n';
+  preview += 'PERSONALIDAD: '+tone+'\n\n';
+  preview += 'REGLAS:\n'+rules+'\n\n';
+  preview += 'ESCALAR AL VENDEDOR CUANDO:\n'+escalate;
+  if(faqList) preview += '\n\nPREGUNTAS FRECUENTES:\n'+faqList;
+  document.getElementById('train-preview').textContent = preview;
+}
+
+function savePersona(){
+  var co = document.getElementById('train-co').value;
+  customPersonas[co] = {
+    name: document.getElementById('train-name').value,
+    companyDesc: document.getElementById('train-company-desc').value,
+    tone: document.getElementById('train-tone').value,
+    rules: document.getElementById('train-rules').value,
+    escalate: document.getElementById('train-escalate').value
+  };
+  localStorage.setItem('crm_personas', JSON.stringify(customPersonas));
+  updatePromptPreview();
+  toast('✅ Personalidad guardada');
+}
+
+function buildPrompt(co){
+  var saved = customPersonas[co];
+  var p = saved || DEFAULT_PERSONAS[co];
+  var coName = co === 'niviko' ? 'NIVIKO' : 'Broker Materiales';
+  var faqList = (faqs[co] || []).map(function(f,i){return (i+1)+'. P: '+f.q+'\n   R: '+f.a;}).join('\n');
+  var prompt = 'Sos '+p.name+', asesor/a de '+coName+', '+p.companyDesc+'\n\n';
+  prompt += 'PERSONALIDAD: '+p.tone+'\n\n';
+  prompt += 'REGLAS:\n'+p.rules+'\n\n';
+  prompt += 'ESCALAR AL VENDEDOR:\n'+p.escalate;
+  if(faqList) prompt += '\n\nPREGUNTAS FRECUENTES:\n'+faqList;
+  return prompt;
+}
+
+function addFAQ(){
+  var q = document.getElementById('faq-q').value.trim();
+  var a = document.getElementById('faq-a').value.trim();
+  if(!q||!a){toast('⚠ Completá pregunta y respuesta');return;}
+  var co = document.getElementById('train-co').value;
+  if(!faqs[co]) faqs[co] = [];
+  faqs[co].push({q,a});
+  localStorage.setItem('crm_faqs', JSON.stringify(faqs));
+  document.getElementById('faq-q').value = '';
+  document.getElementById('faq-a').value = '';
+  renderFAQs();
+  updatePromptPreview();
+  toast('✅ Pregunta agregada');
+}
+
+function renderFAQs(){
+  var co = document.getElementById('train-co').value;
+  var list = faqs[co] || [];
+  var el = document.getElementById('faq-list');
+  if(!el) return;
+  if(!list.length){el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px">Sin preguntas frecuentes aún.</div>';return;}
+  el.innerHTML = list.map(function(f,i){
+    return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">'
+      +'<div style="flex:1"><strong style="color:var(--text)">P: '+f.q+'</strong><br><span style="color:var(--text2)">R: '+f.a+'</span></div>'
+      +'<button class="abt btn-r" data-co="'+co+'" data-idx="'+i+'" onclick="removeFAQ(this.dataset.co,parseInt(this.dataset.idx))" style="font-size:11px;flex-shrink:0">✕</button>'
+      +'</div>';
+  }).join('');
+}
+
+function removeFAQ(co, idx){
+  if(faqs[co]) faqs[co].splice(idx,1);
+  localStorage.setItem('crm_faqs', JSON.stringify(faqs));
+  renderFAQs();updatePromptPreview();
+}
+
+function testPersona(){
+  resetTrainSim();
+  toast('✅ Bot cargado — probalo abajo');
+}
+
+function resetTrainSim(){
+  trainHistory=[];
+  document.getElementById('trainConvWrap').innerHTML='<div class="msg bot">Hola, soy el bot. Escribí algo para probarme.</div>';
+}
+
+async function sendTrainSim(){
+  var input = document.getElementById('trainChatIn');
+  var txt = input.value.trim();
+  if(!txt) return;
+  input.value='';
+  var apiKey = ST.cfg['cfg-claude'];
+  if(!apiKey){toast('⚠ Configurá tu Claude API Key');return;}
+  var w = document.getElementById('trainConvWrap');
+  w.innerHTML += '<div class="msg user">'+txt+'</div>';
+  w.scrollTop = w.scrollHeight;
+  trainHistory.push({role:'user',content:txt});
+  var co = document.getElementById('train-co').value;
+  var sysPrompt = buildPrompt(co);
+  // Add typing indicator
+  w.innerHTML += '<div class="msg bot" id="train-typing"><div class="typing"><div class="dot-anim"></div><div class="dot-anim"></div><div class="dot-anim"></div></div></div>';
+  w.scrollTop = w.scrollHeight;
+  try{
+    var r = await fetch('/api/claude',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,apiKey,system:sysPrompt,messages:trainHistory.slice(-10)})
+    });
+    var data = await r.json();
+    var t = document.getElementById('train-typing');
+    if(t) t.remove();
+    if(data.error) throw new Error(data.error.message);
+    var reply = data.content[0].text;
+    trainHistory.push({role:'assistant',content:reply});
+    w.innerHTML += '<div class="msg bot">'+reply+'</div>';
+    w.scrollTop = w.scrollHeight;
+  }catch(e){
+    var t2=document.getElementById('train-typing');if(t2)t2.remove();
+    w.innerHTML += '<div class="msg bot">❌ Error: '+e.message+'</div>';
+  }
+}
+
+// Bulk enrich all scraper results
+async function enrichAllScraper(){
+  if(!ST.scraperResults||!ST.scraperResults.length){toast('⚠ Hacé una búsqueda primero');return;}
+  var mapsKey = ST.cfg['cfg-maps'];
+  if(!mapsKey){toast('⚠ Configurá tu Google Maps API Key');return;}
+  var toEnrich = ST.scraperResults.filter(function(r){return r.place_id && !r.whatsapp && !r.email;});
+  if(!toEnrich.length){toast('✅ Todos ya tienen datos de contacto');return;}
+  toast('🔍 Enriqueciendo '+toEnrich.length+' resultados...');
+  var done = 0;
+  for(var i=0;i<ST.scraperResults.length;i++){
+    var r = ST.scraperResults[i];
+    if(!r.place_id||r.whatsapp||r.email) continue;
+    try{
+      var res = await fetch('/api/maps?enrich=true&place_id='+encodeURIComponent(r.place_id)+'&key='+mapsKey);
+      var data = await res.json();
+      if(data) ST.scraperResults[i] = Object.assign({},r,data);
+      done++;
+      if(done%5===0) toast('🔍 Enriquecidos '+done+'/'+toEnrich.length+'...');
+      await new Promise(function(resolve){setTimeout(resolve,200);});
+    }catch(e){console.error(e);}
+  }
+  renderScraperResults(ST.scraperResults, scraperCurrentRubro||'', '');
+  toast('✅ Enriquecimiento completo: '+done+' procesados');
+}
+
+// Bulk enrich all CRM prospects without contact data
+async function enrichAllProspects(){
+  var mapsKey = ST.cfg['cfg-maps'];
+  if(!mapsKey){toast('⚠ Configurá tu Google Maps API Key');return;}
+  var ps = getP();
+  var toEnrich = ps.filter(function(p){return !p.tel&&!p.WhatsApp&&!p.email;});
+  if(!toEnrich.length){toast('✅ Todos los prospectos ya tienen datos');return;}
+  if(!confirm('¿Enriquecer '+toEnrich.length+' prospectos sin datos de contacto? Puede tardar varios minutos.')) return;
+  toast('🔍 Enriqueciendo '+toEnrich.length+' prospectos...');
+  var done=0;
+  for(var i=0;i<ps.length;i++){
+    var p = ps[i];
+    if(p.tel||p.WhatsApp||p.email) continue;
+    try{
+      var url='/api/maps?query='+encodeURIComponent(p.nombre+(p.zona?' '+p.zona:''))+'&key='+mapsKey;
+      var r = await fetch(url);
+      var data = await r.json();
+      if(data.results&&data.results.length>0){
+        var best=data.results[0];
+        if(best.tel) ps[i].tel=best.tel;
+        if(best.whatsapp) ps[i].WhatsApp=best.whatsapp;
+        if(best.email) ps[i].email=best.email;
+        if(best.instagram) ps[i].ig=best.instagram;
+        if(best.website) ps[i].website=best.website;
+      }
+      done++;
+      if(done%10===0){toast('🔍 '+done+'/'+toEnrich.length+' procesados...');saveP_data(ps);}
+      await new Promise(function(resolve){setTimeout(resolve,300);});
+    }catch(e){console.error(e);}
+  }
+  saveP_data(ps);renderAll();
+  toast('✅ Enriquecimiento completo: '+done+' prospectos actualizados');
+}
 // ═══════════════════════════════════════════════
 // BOT SIMULATOR
 // ═══════════════════════════════════════════════
@@ -1107,10 +1838,10 @@ async function sendSim(){
   // Simulate delay like human
   await new Promise(r=>setTimeout(r,800+Math.random()*1200));
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('/api/claude',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:250,system:sysPrompt,messages:simHistory})
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:250,apiKey:ST.cfg['cfg-claude'],system:sysPrompt,messages:simHistory})
     });
     const data=await res.json();
     hideTyping();
@@ -1258,7 +1989,7 @@ function exportReport(fmt){
 // ═══════════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════════
-const CFG_KEYS=['cfg-claude','cfg-maps','cfg-wa-phone','cfg-wa-token','cfg-wa-appid','cfg-verify-token','cfg-firebase','cfg-vendedor-wa','cfg-vendedor-email'];
+var CFG_KEYS=['cfg-claude','cfg-maps','cfg-wa-phone','cfg-wa-token','cfg-wa-appid','cfg-verify-token','cfg-firebase','cfg-vendedor-wa','cfg-vendedor-email','cfg-sendgrid','cfg-from-email'];
 function saveConfig(){
   CFG_KEYS.forEach(k=>{const el=document.getElementById(k);if(el)ST.cfg[k]=el.value;});
   const vt=document.getElementById('cfg-verify-token');
@@ -1267,7 +1998,7 @@ function saveConfig(){
   localStorage.setItem('crm_cfg',JSON.stringify(ST.cfg));
   updateApiDots();
   const wid=document.getElementById('webhookUrl');
-  if(wid)wid.textContent='https://TU-PROYECTO.vercel.app/api/webhook';
+  if(wid)wid.textContent='https://prospector-crm-lac.vercel.app/api/webhook';
 }
 function loadCfg(){
   CFG_KEYS.forEach(k=>{const el=document.getElementById(k);if(el&&ST.cfg[k])el.value=ST.cfg[k];});
@@ -1275,12 +2006,28 @@ function loadCfg(){
 }
 function updateApiDots(){
   const set=(id,cls)=>{const el=document.getElementById(id);if(el)el.className='sd '+cls;};
-  set('dot-maps',ST.cfg['cfg-maps']?'ok':'warn');
-  set('dot-wa',ST.cfg['cfg-wa-token']?'ok':'warn');
-  set('dot-claude',ST.cfg['cfg-claude']?'ok':'warn');
-  set('dot-fb',ST.cfg['cfg-firebase']?'ok':'err');
+  const hasMaps=!!ST.cfg['cfg-maps'];
+  const hasWA=!!ST.cfg['cfg-wa-token'];
+  const hasClaude=!!ST.cfg['cfg-claude'];
+  const hasFB=!!ST.cfg['cfg-firebase'];
+  set('dot-maps', hasMaps?'ok':'warn');
+  set('dot-wa', hasWA?'ok':'warn');
+  set('dot-claude', hasClaude?'ok':'warn');
+  set('dot-fb', hasFB?'ok':'warn');
   const sc=document.getElementById('sc-key-st');
-  if(sc){sc.textContent=ST.cfg['cfg-maps']?'configurada':'no configurada';sc.style.color=ST.cfg['cfg-maps']?'var(--green)':'var(--orange)';}
+  if(sc){sc.textContent=hasMaps?'✅ configurada':'⚠ no configurada';sc.style.color=hasMaps?'var(--green)':'var(--orange)';}
+  // Update bot status
+  const botDot=document.getElementById('bot-status-dot');
+  const botTxt=document.getElementById('bot-status-txt');
+  if(botDot&&botTxt){
+    if(hasWA&&hasClaude){
+      botDot.style.background='var(--green)';
+      botTxt.textContent='Activo — bot listo para responder';
+    } else {
+      botDot.style.background='var(--orange)';
+      botTxt.textContent='Inactivo — falta '+((!hasClaude&&!hasWA)?'Claude API y WhatsApp API':!hasClaude?'Claude API Key':'WhatsApp API Token');
+    }
+  }
 }
 async function testAPIs(){
   toast('🔌 Verificando conexiones...');
@@ -1298,62 +2045,289 @@ function renderSetupGuide(){
   const el=document.getElementById('setupContent');
   if(!el)return;
   const steps=[
-    {n:'1',title:'Subir a GitHub Pages',color:'var(--accent-n)',content:`
-      <p>1. Creá un repo nuevo en GitHub: <code>tu-usuario/prospector</code></p>
-      <p>2. Subí <code>index.html</code>, <code>manifest.json</code>, <code>api/webhook.js</code>, <code>vercel.json</code></p>
-      <p>3. En Settings → Pages → Source: main / root</p>
-      <p>4. URL: <code>https://tu-usuario.github.io/prospector/</code></p>
-      <p style="color:var(--orange)">⚠️ Para el bot (webhook) necesitás Vercel — GitHub Pages no soporta funciones serverless.</p>`},
-    {n:'2',title:'Deploy en Vercel (para el bot)',color:'var(--blue)',content:`
-      <p>1. Instalá Vercel CLI: <code>npm i -g vercel</code></p>
-      <p>2. En la carpeta del proyecto: <code>vercel deploy</code></p>
-      <p>3. Tu URL será: <code>https://prospector-xxx.vercel.app</code></p>
-      <p>4. Usá esa URL como base del webhook de WhatsApp</p>`},
-    {n:'3',title:'Claude API',color:'var(--accent-n)',content:`
-      <p>1. Ir a <code>console.anthropic.com</code></p>
-      <p>2. API Keys → Create Key</p>
-      <p>3. Copiar la key y pegarla en Configuración → Claude API</p>
-      <p>4. El crédito inicial es de $5 USD — alcanza para miles de mensajes</p>`},
-    {n:'4',title:'Google Maps Places API',color:'var(--green)',content:`
-      <p>1. Ir a <code>console.cloud.google.com</code></p>
-      <p>2. Crear proyecto → Habilitar "Places API"</p>
-      <p>3. Credentials → Create API Key</p>
-      <p>4. Restringir la key a tu dominio (recomendado)</p>
-      <p>5. Pegar en Configuración → Google Maps</p>
-      <p style="color:var(--green)">✅ $200 de crédito gratuito por mes — suficiente para miles de búsquedas</p>`},
-    {n:'5',title:'WhatsApp Business API (Meta)',color:'#25d366',content:`
-      <p><strong style="color:var(--text)">Paso a paso:</strong></p>
-      <p>1. Ir a <code>developers.facebook.com</code></p>
-      <p>2. My Apps → Create App → Business</p>
-      <p>3. Add Product → WhatsApp → Set Up</p>
-      <p>4. En WhatsApp → Getting Started:</p>
-      <p>&nbsp;&nbsp;• Copiar <strong>Phone Number ID</strong></p>
-      <p>&nbsp;&nbsp;• Generar <strong>Temporary Access Token</strong> (o permanente)</p>
-      <p>5. En Configuration → Webhook:</p>
-      <p>&nbsp;&nbsp;• URL: <code>https://TU-PROYECTO.vercel.app/api/webhook</code></p>
-      <p>&nbsp;&nbsp;• Verify Token: el que pusiste en Configuración</p>
-      <p>&nbsp;&nbsp;• Suscribirse a: <code>messages</code></p>
-      <p>6. Para token permanente: System Users → Generate Token con permisos <code>whatsapp_business_messaging</code></p>
-      <p style="color:var(--green)">✅ 1.000 conversaciones gratis por mes</p>`},
-    {n:'6',title:'Firebase Firestore (opcional)',color:'var(--accent-b)',content:`
-      <p>1. Ir a <code>console.firebase.google.com</code></p>
-      <p>2. Create Project → "prospector-crm"</p>
-      <p>3. Firestore Database → Create → Start in test mode</p>
-      <p>4. Project Settings → General → Your Apps → Web → Registrar</p>
-      <p>5. Copiar el config JSON completo</p>
-      <p>6. Pegarlo en Configuración → Firebase</p>
-      <p style="color:var(--text3)">Sin Firebase los datos se guardan en localStorage (solo en este dispositivo)</p>`},
+    {n:'1',emoji:'🔥',title:'Firebase Firestore — Base de datos',color:'#f97316',urgent:true,content:`
+      <p style="color:var(--orange);font-weight:500;margin-bottom:8px">⚡ Hacé esto primero — sin Firebase los datos solo existen en este navegador.</p>
+      <p><strong style="color:var(--text)">Paso 1.</strong> Ir a <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent)">console.firebase.google.com</a></p>
+      <p><strong style="color:var(--text)">Paso 2.</strong> Click en <strong>Add project</strong> → nombre: <code>prospector-crm</code> → Continue → deshabilitar Google Analytics → Create project</p>
+      <p><strong style="color:var(--text)">Paso 3.</strong> En el menú izquierdo → <strong>Firestore Database</strong> → <strong>Create database</strong> → elegir región: <code>us-east1</code> → <strong>Start in test mode</strong> → Enable</p>
+      <p><strong style="color:var(--text)">Paso 4.</strong> Ir a Project Settings (⚙️ arriba a la izq.) → pestaña <strong>General</strong> → scroll hasta "Your apps" → click en el ícono <strong>&lt;/&gt;</strong> (Web)</p>
+      <p><strong style="color:var(--text)">Paso 5.</strong> Nombre: "prospector" → Register app → te aparece un bloque de código con <code>firebaseConfig</code></p>
+      <p><strong style="color:var(--text)">Paso 6.</strong> Copiá solo el objeto JSON (desde la llave { hasta la llave }) y pegalo en <strong>Configuración → Firebase</strong> de esta app</p>
+      <p style="color:var(--green)">✅ Gratis hasta 50.000 lecturas/día — más que suficiente</p>`},
+    {n:'2',emoji:'🗺',title:'Google Maps Places API — Scraper',color:'#10b981',urgent:false,content:`
+      <p><strong style="color:var(--text)">Paso 1.</strong> Ir a <a href="https://console.cloud.google.com" target="_blank" style="color:var(--accent)">console.cloud.google.com</a></p>
+      <p><strong style="color:var(--text)">Paso 2.</strong> Crear proyecto nuevo → nombre: "prospector-crm" (o usar uno existente)</p>
+      <p><strong style="color:var(--text)">Paso 3.</strong> Menú izquierdo → <strong>APIs & Services</strong> → <strong>Library</strong> → buscar <strong>"Places API"</strong> → Enable</p>
+      <p><strong style="color:var(--text)">Paso 4.</strong> APIs & Services → <strong>Credentials</strong> → <strong>+ Create Credentials</strong> → API Key</p>
+      <p><strong style="color:var(--text)">Paso 5.</strong> Click en la key creada → en "Application restrictions" → HTTP referrers → agregar: <code>prospector-crm-lac.vercel.app/*</code></p>
+      <p><strong style="color:var(--text)">Paso 6.</strong> Copiar la key (empieza con <code>AIza...</code>) y pegarla en <strong>Configuración → Google Maps</strong></p>
+      <p><strong style="color:var(--text)">Paso 7.</strong> Activar facturación: Billing → Linked billing account (necesario para la API, pero el crédito de $200/mes cubre todo el uso normal)</p>
+      <p style="color:var(--green)">✅ $200 de crédito gratis/mes = ~6.000 búsquedas sin costo</p>`},
+    {n:'3',emoji:'💬',title:'WhatsApp Business API — Bot y envíos',color:'#25d366',urgent:false,content:`
+      <p style="color:var(--text2);margin-bottom:10px">Esto tiene 3 sub-pasos: crear la app, obtener las credenciales, y configurar el webhook.</p>
+      <p><strong style="color:var(--text)">SUB-PASO A — Crear la app en Meta</strong></p>
+      <p>1. Ir a <a href="https://developers.facebook.com" target="_blank" style="color:var(--accent)">developers.facebook.com</a> con tu cuenta de Facebook</p>
+      <p>2. My Apps → <strong>Create App</strong> → tipo: <strong>Business</strong> → nombre: "NIVIKO Prospector"</p>
+      <p>3. En tu app → Add Product → <strong>WhatsApp</strong> → Set Up</p>
+      <p>4. Aceptar los términos de servicio de WhatsApp Business</p>
+      <br>
+      <p><strong style="color:var(--text)">SUB-PASO B — Obtener credenciales</strong></p>
+      <p>1. WhatsApp → Getting Started → vas a ver un número de prueba gratis</p>
+      <p>2. Copiá el <strong>Phone Number ID</strong> (número largo) → pegalo en Configuración → WA Phone ID</p>
+      <p>3. Copiá el <strong>Temporary access token</strong> → pegalo en Configuración → WA Token</p>
+      <p>4. Para token permanente: Business Settings → System Users → Add → rol Admin → Generate New Token → seleccioná tu app → permisos: <code>whatsapp_business_messaging</code> + <code>whatsapp_business_management</code></p>
+      <br>
+      <p><strong style="color:var(--text)">SUB-PASO C — Configurar el webhook</strong></p>
+      <p>1. WhatsApp → Configuration → Webhook → Edit</p>
+      <p>2. Callback URL: <code>https://prospector-crm-lac.vercel.app/api/webhook</code></p>
+      <p>3. Verify Token: el que pusiste en Configuración (ej: <code>niviko_prospector_2026</code>)</p>
+      <p>4. Click Verify and Save → si dice "Verified" ✅ está conectado</p>
+      <p>5. Click Subscribe en el campo <strong>messages</strong></p>
+      <br>
+      <p><strong style="color:var(--text)">Envío de imágenes/banners:</strong></p>
+      <p>La API soporta imágenes nativamente. Subís el banner a Firebase Storage o a cualquier URL pública, y el bot lo envía con el texto. Próxima actualización del webhook incluye soporte de imágenes.</p>
+      <p style="color:var(--green)">✅ 1.000 conversaciones gratis/mes · ~$0.06 por conv. adicional</p>`},
+    {n:'4',emoji:'✦',title:'Claude API — Generador de mensajes e IA',color:'var(--accent-n)',urgent:false,content:`
+      <p><strong style="color:var(--text)">Paso 1.</strong> Ir a <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a></p>
+      <p><strong style="color:var(--text)">Paso 2.</strong> Crear cuenta con tu email</p>
+      <p><strong style="color:var(--text)">Paso 3.</strong> API Keys → <strong>Create Key</strong> → nombre: "prospector"</p>
+      <p><strong style="color:var(--text)">Paso 4.</strong> Copiar la key (empieza con <code>sk-ant-...</code>) y pegarla en <strong>Configuración → Claude API</strong></p>
+      <p><strong style="color:var(--text)">Paso 5.</strong> Billing → Add credits → con $10 USD tenés miles de mensajes generados</p>
+      <p style="color:var(--green)">✅ Menos de $5 USD/mes con uso normal (300 mensajes/mes)</p>`},
   ];
   el.innerHTML=steps.map(s=>`
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:12px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <div style="width:28px;height:28px;border-radius:50%;background:${s.color};color:#000;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;">${s.n}</div>
-        <span style="font-family:var(--ff);font-size:15px;font-weight:600">${s.title}</span>
+    <div style="background:var(--bg2);border:1px solid ${s.urgent?'var(--orange)':'var(--border)'};border-radius:var(--r);padding:20px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="width:36px;height:36px;border-radius:10px;background:${s.color};color:#000;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${s.emoji}</div>
+        <div>
+          <div style="font-family:var(--ff);font-size:15px;font-weight:600">${s.title}</div>
+          ${s.urgent?'<div style="font-size:11px;color:var(--orange);font-family:var(--fm)">HACER PRIMERO</div>':''}
+        </div>
       </div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.9">${s.content}</div>
+      <div style="font-size:13px;color:var(--text2);line-height:2">${s.content}</div>
     </div>`).join('');
 }
 
+
+// ═══════════════════════════════════════════════
+// EMAIL CAMPAIGNS
+// ═══════════════════════════════════════════════
+let emailBatchIndex = 0;
+let emailBatches = [];
+let emailCurrentRubro = '';
+
+function initEmailPanel(){
+  const ps = getP();
+  const em = ps.filter(p => p.email && p.email.includes('@'));
+  const tandas = Math.ceil(em.length / 50);
+  document.getElementById('em-total').textContent = em.length;
+  document.getElementById('em-tandas').textContent = tandas;
+  document.getElementById('em-sent').textContent = ps.filter(p=>p.emailSent).length;
+  document.getElementById('em-pending').textContent = em.filter(p=>!p.emailSent).length;
+  // Populate rubro select
+  const sel = document.getElementById('email-rubro');
+  if(sel){
+    const rubros = [...new Set(ps.map(p=>p.rubro).filter(Boolean))];
+    sel.innerHTML = '<option value="">Todos los rubros</option>' + rubros.map(r=>`<option value="${r}">${r}</option>`).join('');
+  }
+  // Build batches
+  emailBatches = [];
+  for(let i=0; i<em.length; i+=50){
+    emailBatches.push(em.slice(i, i+50));
+  }
+}
+
+async function genEmailCampaign(){
+  const tipo = document.getElementById('email-tipo').value;
+  const ctx = document.getElementById('email-ctx').value;
+  const rubroFilter = document.getElementById('email-rubro').value;
+  const apiKey = ST.cfg['cfg-claude'];
+  if(!apiKey){toast('⚠️ Configurá tu Claude API Key');return;}
+
+  const ps = getP();
+  let targets = ps.filter(p=>p.email && p.email.includes('@'));
+  if(rubroFilter) targets = targets.filter(p=>p.rubro===rubroFilter);
+
+  emailBatches = [];
+  for(let i=0; i<targets.length; i+=50) emailBatches.push(targets.slice(i,i+50));
+  emailBatchIndex = 0;
+
+  const coName = ST.co==='niviko'?'NIVIKO Argentina':'Broker Materiales';
+  const coDesc = ST.co==='niviko'?'importadora y distribuidora mayorista de muebles, sillas, artículos del hogar y electrónica':'broker de materiales de construcción y terminaciones premium';
+  const tipoMap = {presentacion:'presentación inicial de la empresa',catalogo:'envío de catálogo de productos',promocion:'promoción especial con descuento',seguimiento:'seguimiento a contacto previo',reactivacion:'reactivación de contacto frío'};
+  const rubroInfo = rubroFilter || 'comercios de artículos del hogar y muebles';
+
+  const prompt = `Sos el equipo comercial de ${coName}, ${coDesc}.
+
+Escribí un email de ${tipoMap[tipo]} para enviar a comercios del rubro: ${rubroInfo}.
+Contexto adicional: ${ctx || 'ninguno'}.
+
+El email debe:
+- Tener un asunto atractivo que no parezca spam (sin "PROMOCIÓN" en mayúsculas)
+- Ser conciso (máximo 150 palabras en el cuerpo)
+- Tono profesional pero cercano
+- Terminar con un CTA claro (llamar, responder el mail, pedir catálogo)
+- Usar HTML simple con párrafos <p> y negritas <strong> donde corresponda
+
+Respondé SOLO con este JSON (sin markdown):
+{"asunto":"...","cuerpo":"..."}`;
+
+  const out = document.getElementById('email-subject');
+  const bodyEl = document.getElementById('email-body');
+  document.getElementById('email-preview-wrap').style.display = 'block';
+  out.value = 'Generando...'; bodyEl.value = 'Generando con IA...';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,apiKey:ST.cfg['cfg-claude'],messages:[{role:'user',content:prompt}]})
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error.message);
+    const text = data.content[0].text.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(text);
+    out.value = parsed.asunto || '';
+    bodyEl.value = parsed.cuerpo || '';
+    updateBatchDisplay();
+    toast('✅ Email generado');
+  } catch(e){
+    out.value = 'Error: ' + e.message;
+    bodyEl.value = '';
+    toast('❌ Error generando email: ' + e.message);
+  }
+}
+
+function updateBatchDisplay(){
+  if(!emailBatches.length) return;
+  const batch = emailBatches[emailBatchIndex] || [];
+  document.getElementById('email-batch-info').textContent = 'Tanda '+(emailBatchIndex+1)+' de '+emailBatches.length+' · '+batch.length+' destinatarios';
+  const listEl = document.getElementById('email-batch-list');
+  let html = '<div style="display:grid;grid-template-columns:2fr 2fr 1fr 1fr;padding:8px 12px;font-size:10px;font-family:var(--fm);color:var(--text3);border-bottom:1px solid var(--border);text-transform:uppercase"><div>Empresa</div><div>Email</div><div>Ciudad</div><div>Estado</div></div>';
+  batch.forEach(function(p, i){
+    const bg = i%2 ? 'background:var(--bg3)' : '';
+    const sent = p.emailSent;
+    const statusBg = sent ? 'var(--bg3)' : '#1a2a1a';
+    const statusColor = sent ? 'var(--text3)' : 'var(--green)';
+    const statusBorder = sent ? 'var(--border)' : '#2a6a2a';
+    const statusText = sent ? 'Enviado' : 'Pendiente';
+    html += '<div style="display:grid;grid-template-columns:2fr 2fr 1fr 1fr;padding:8px 12px;font-size:12px;border-bottom:1px solid var(--border);'+bg+'">';
+    html += '<div style="color:var(--text)">'+(p.nombre||p.empresa||'')+'</div>';
+    html += '<div style="color:var(--text2)">'+(p.email||'')+'</div>';
+    html += '<div style="color:var(--text3)">'+(p.zona||p.ciudad||'')+'</div>';
+    html += '<div><span style="font-size:10px;padding:2px 7px;border-radius:10px;background:'+statusBg+';color:'+statusColor+';border:1px solid '+statusBorder+'">'+statusText+'</span></div>';
+    html += '</div>';
+  });
+  listEl.innerHTML = html;
+}
+function nextBatch(){
+  if(emailBatchIndex < emailBatches.length-1){
+    emailBatchIndex++;
+    updateBatchDisplay();
+    toast(`Tanda ${emailBatchIndex+1} de ${emailBatches.length}`);
+  } else {
+    toast('✅ Ya estás en la última tanda');
+  }
+}
+
+function showBatchSelector(){
+  if(!emailBatches.length){ initEmailPanel(); }
+  toast(`${emailBatches.length} tandas de 50 emails disponibles`);
+}
+
+function copyEmailForClient(){
+  const subject = document.getElementById('email-subject').value;
+  const body = document.getElementById('email-body').value;
+  const batch = emailBatches[emailBatchIndex] || [];
+  const emails = batch.map(p=>p.email).filter(Boolean).join(', ');
+  const text = `ASUNTO: ${subject}
+
+DESTINATARIOS (${batch.length}):
+${emails}
+
+CUERPO:
+${body}`;
+  navigator.clipboard.writeText(text).then(()=>toast('📋 Copiado — pegalo en tu cliente de email'));
+}
+
+async function sendCurrentBatch(){
+  const sgKey = ST.cfg['cfg-sendgrid'];
+  if(!sgKey){toast('⚠️ Configurá tu SendGrid API Key en Configuración');return;}
+  const batch = emailBatches[emailBatchIndex] || [];
+  if(!batch.length){toast('⚠️ No hay destinatarios en esta tanda');return;}
+  const subject = document.getElementById('email-subject').value;
+  const body = document.getElementById('email-body').value;
+  if(!subject||!body){toast('⚠️ Completá asunto y cuerpo');return;}
+  if(!confirm(`¿Enviar ${batch.length} emails ahora?`)) return;
+  toast(`📤 Enviando ${batch.length} emails...`);
+  try {
+    const res = await fetch('/api/email-send',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({to:batch.map(p=>({email:p.email,name:p.nombre||p.empresa||''})),subject,body,sg_key:sgKey})
+    });
+    const data = await res.json();
+    // Mark as sent
+    const ps = getP();
+    batch.forEach(p=>{const idx=ps.findIndex(x=>x.id===p.id);if(idx!==-1)ps[idx].emailSent=true;});
+    saveP_data(ps);renderAll();updateBatchDisplay();
+    toast(`✅ ${data.success} enviados · ${data.failed} fallidos`);
+  } catch(e){ toast('❌ Error: '+e.message); }
+}
+
+function exportEmailList(){
+  const ps = getP().filter(p=>p.email&&p.email.includes('@'));
+  const rows = [['Empresa','Email','Teléfono','Ciudad','Rubro','Estado'],...ps.map(p=>[p.nombre,p.email,p.tel||'',p.zona||'',p.rubro||'',p.emailSent?'Enviado':'Pendiente'])];
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download=`emails_${ST.co}_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  toast('📋 Lista exportada');
+}
+
+function exportScraperCSV(){
+  if(!ST.scraperResults||!ST.scraperResults.length){toast('⚠️ No hay resultados para exportar');return;}
+  const rows=[['Nombre','Zona','Teléfono','Rating','Website','Rubro'],...ST.scraperResults.map(r=>[r.nombre,r.zona,r.tel||'',r.rating||'',r.website||'',r.rubro||''])];
+  const csv=rows.map(r=>r.map(v=>'"'+v+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download=`scraper_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  toast('📋 Resultados exportados');
+}
+
+// ── Enriquecer prospecto desde Maps/Web ──
+async function enrichProspect(id){
+  const ps=getP();
+  const idx=ps.findIndex(x=>x.id===id);
+  if(idx===-1)return;
+  const p=ps[idx];
+  const mapsKey=ST.cfg['cfg-maps'];
+  if(!mapsKey){toast('⚠ Configurá tu Google Maps API Key');return;}
+  toast('🔍 Buscando datos para '+p.nombre+'...');
+  
+  try {
+    // Search Maps for this business
+    let url='/api/maps?query='+encodeURIComponent(p.nombre+(p.zona?' '+p.zona:''))+'&key='+mapsKey;
+    const r=await fetch(url);
+    const data=await r.json();
+    
+    if(data.results&&data.results.length>0){
+      const best=data.results[0];
+      // Merge: don't overwrite existing data
+      if(!p.tel&&best.tel) ps[idx].tel=best.tel;
+      if(!p.WhatsApp&&best.whatsapp) ps[idx].WhatsApp=best.whatsapp;
+      if(!p.email&&best.email) ps[idx].email=best.email;
+      if(!p.ig&&best.instagram) ps[idx].ig=best.instagram;
+      if(!p.website&&best.website) ps[idx].website=best.website;
+      if(!p.rating&&best.rating) ps[idx].rating=best.rating;
+      if(!p.zona&&best.zona) ps[idx].zona=best.zona;
+      ps[idx].notas=(ps[idx].notas||'')+(best.website?'\nWeb: '+best.website:'');
+      saveP_data(ps);
+      // Update modal fields
+      showProspect(id);
+      toast('✅ Datos enriquecidos para '+p.nombre);
+    } else {
+      toast('⚠ No se encontraron datos adicionales en Maps');
+    }
+  }catch(e){toast('⚠ Error: '+e.message);}
+}
 // ═══════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════

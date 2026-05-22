@@ -1,13 +1,9 @@
 {
   "name": "Prospector CRM",
   "short_name": "Prospector",
-  "description": "CRM de prospección con bot WhatsApp para NIVIKO y Broker Materiales",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
-  "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
-  ]
+  "description": "CRM de prospeccion NIVIKO"
 }

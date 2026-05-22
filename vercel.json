@@ -1,26 +1,9 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "api/**/*.js", "use": "@vercel/node" },
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "manifest.json", "use": "@vercel/static" }
-  ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/privacy", "dest": "/privacy.html" },
+    { "src": "/privacy.html", "dest": "/privacy.html" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ],
-  "env": {
-    "CLAUDE_API_KEY": "@claude-api-key",
-    "WA_ACCESS_TOKEN": "@wa-access-token",
-    "WA_PHONE_ID_NIVIKO": "@wa-phone-id-niviko",
-    "WA_PHONE_ID_BROKER": "@wa-phone-id-broker",
-    "WA_VERIFY_TOKEN": "@wa-verify-token",
-    "VENDEDOR_WA_PHONE": "@vendedor-wa-phone"
-  },
-  "crons": [
-    {
-      "path": "/api/scraper-cron",
-      "schedule": "0 9 * * 1"
-    }
   ]
 }
