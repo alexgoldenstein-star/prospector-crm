@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0a0a0a">
 <title>Prospector CRM</title>
-<link rel="manifest" href="manifest.json">
+<!-- manifest removed to avoid parse errors -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1549,7 +1549,7 @@ async function genMsg(){
     const res=await fetch('/api/claude',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,apiKey:ST.cfg['cfg-claude'],messages:[{role:'user',content:prompt}]})
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:500,apiKey:ST.cfg['cfg-claude'],messages:[{role:'user',content:prompt}]})
     });
     const data=await res.json();
     if(data.error)throw new Error(data.error.message);
@@ -1715,7 +1715,7 @@ async function sendTrainSim(){
     var r = await fetch('/api/claude',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,apiKey,system:sysPrompt,messages:trainHistory.slice(-10)})
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:200,apiKey,system:sysPrompt,messages:trainHistory.slice(-10)})
     });
     var data = await r.json();
     var t = document.getElementById('train-typing');
@@ -1841,7 +1841,7 @@ async function sendSim(){
     const res=await fetch('/api/claude',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:250,apiKey:ST.cfg['cfg-claude'],system:sysPrompt,messages:simHistory})
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:250,apiKey:ST.cfg['cfg-claude'],system:sysPrompt,messages:simHistory})
     });
     const data=await res.json();
     hideTyping();
@@ -2181,7 +2181,7 @@ Respondé SOLO con este JSON (sin markdown):
     const res = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,apiKey:ST.cfg['cfg-claude'],messages:[{role:'user',content:prompt}]})
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:600,apiKey:ST.cfg['cfg-claude'],messages:[{role:'user',content:prompt}]})
     });
     const data = await res.json();
     if(data.error) throw new Error(data.error.message);
