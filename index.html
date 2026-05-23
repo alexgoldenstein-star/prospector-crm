@@ -543,8 +543,25 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
         </div>
       </div>
 
-      <div style="margin-top:18px" class="sec-hdr"><div class="sec-title">Conversaciones activas</div></div>
+      <div style="margin-top:18px" class="sec-hdr">
+        <div class="sec-title">💬 Historial de conversaciones</div>
+        <button class="btn btn-g" style="font-size:12px;margin-left:auto" onclick="loadChatHistory()">↺ Actualizar</button>
+      </div>
       <div id="activeConvs"></div>
+      <div id="chatHistoryWrap" style="display:none;margin-top:14px">
+        <div class="sec-hdr">
+          <div class="sec-title" id="chatHistoryTitle">Conversación</div>
+          <button class="btn btn-g" style="font-size:12px" onclick="document.getElementById('chatHistoryWrap').style.display='none'">✕ Cerrar</button>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px">
+          <div class="conv-wrap" id="chatHistoryMsgs" style="max-height:400px"></div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <input class="chat-in" id="manualReplyIn" placeholder="Responder manualmente...">
+            <button class="btn btn-p" onclick="sendManualReply()">Enviar</button>
+            <button class="btn btn-g" id="botToggleBtn" onclick="toggleBot()">⏸ Pausar bot</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- REPORTES -->
@@ -683,6 +700,53 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
           </div>
         </div>
       </div>
+            <div class="sec-hdr" style="margin-top:20px">
+        <div class="sec-title">📎 Recursos del bot</div>
+        <div style="font-size:12px;color:var(--text2)">El bot puede enviar estos archivos cuando el cliente los pide</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px">
+        <div class="scraper-card">
+          <div class="sc-title">📋 Catálogo</div>
+          <div class="sc-sub">URL que el bot envía cuando piden el catálogo.</div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="flbl">URL del catálogo</label>
+            <input class="fi" id="res-catalogo" placeholder="https://drive.google.com/...">
+          </div>
+          <div class="fg">
+            <label class="flbl">Mensaje que acompaña</label>
+            <input class="fi" id="res-catalogo-msg" placeholder="Acá te paso nuestro catálogo completo...">
+          </div>
+        </div>
+        <div class="scraper-card">
+          <div class="sc-title">💰 Lista de precios</div>
+          <div class="sc-sub">Link a la lista mayorista actualizada.</div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="flbl">URL lista de precios</label>
+            <input class="fi" id="res-precios" placeholder="https://drive.google.com/...">
+          </div>
+          <div class="fg">
+            <label class="flbl">Mensaje que acompaña</label>
+            <input class="fi" id="res-precios-msg" placeholder="Acá te paso la lista mayorista vigente...">
+          </div>
+        </div>
+        <div class="scraper-card">
+          <div class="sc-title">🎯 Promociones</div>
+          <div class="sc-sub">Texto o link con las promos activas del mes.</div>
+          <div class="fg" style="margin-bottom:8px">
+            <label class="flbl">URL o texto de promos</label>
+            <input class="fi" id="res-promos" placeholder="https://... o texto de la promo">
+          </div>
+          <div class="fg">
+            <label class="flbl">Mensaje que acompaña</label>
+            <input class="fi" id="res-promos-msg" placeholder="Esta semana tenemos...">
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:18px">
+        <button class="btn btn-p" onclick="saveResources()">💾 Guardar recursos</button>
+        <div style="font-size:12px;color:var(--text2);align-self:center">Los recursos se envían automáticamente cuando el cliente pide catálogo, precios o promos</div>
+      </div>
+
       <div class="sec-hdr"><div class="sec-title">🧪 Probá el bot en tiempo real</div></div>
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px">
         <div class="conv-wrap" id="trainConvWrap" style="min-height:120px"></div>
@@ -926,9 +990,9 @@ function showPanel(n){
   setNav(n);
   if(n==='mensajes')populateMsgSelect();
   if(n==='emails')initEmailPanel();
-  if(n==='training'){loadPersona();resetTrainSim();customPersonas=JSON.parse(localStorage.getItem('crm_personas')||'{}');faqs=JSON.parse(localStorage.getItem('crm_faqs')||'{}');loadPersona();}
+  if(n==='training'){loadPersona();resetTrainSim();loadResources();customPersonas=JSON.parse(localStorage.getItem('crm_personas')||'{}');faqs=JSON.parse(localStorage.getItem('crm_faqs')||'{}');loadPersona();}
   if(n==='reportes')renderReports();
-  if(n==='bot'){populateSimSelect();renderActiveConvs();}
+  if(n==='bot'){populateSimSelect();renderActiveConvs();loadChatHistory();}
   if(n==='scraper')populateScraperRubros();
 }
 function setNav(n){
@@ -1569,6 +1633,124 @@ function sendMail(){const id=document.getElementById('msgP').value;const p=getP(
 function copyMsg(){navigator.clipboard.writeText(ST.genMsg).then(()=>toast('📋 Copiado'));}
 
 
+
+// ═══════════════════════════════════════════════
+// RECURSOS DEL BOT
+// ═══════════════════════════════════════════════
+function saveResources(){
+  var res = {
+    catalogo: document.getElementById('res-catalogo')?.value || '',
+    catalogoMsg: document.getElementById('res-catalogo-msg')?.value || '',
+    precios: document.getElementById('res-precios')?.value || '',
+    preciosMsg: document.getElementById('res-precios-msg')?.value || '',
+    promos: document.getElementById('res-promos')?.value || '',
+    promosMsg: document.getElementById('res-promos-msg')?.value || ''
+  };
+  localStorage.setItem('crm_resources', JSON.stringify(res));
+  toast('✅ Recursos guardados');
+}
+
+function loadResources(){
+  var res = JSON.parse(localStorage.getItem('crm_resources') || '{}');
+  if(document.getElementById('res-catalogo')) document.getElementById('res-catalogo').value = res.catalogo || '';
+  if(document.getElementById('res-catalogo-msg')) document.getElementById('res-catalogo-msg').value = res.catalogoMsg || '';
+  if(document.getElementById('res-precios')) document.getElementById('res-precios').value = res.precios || '';
+  if(document.getElementById('res-precios-msg')) document.getElementById('res-precios-msg').value = res.preciosMsg || '';
+  if(document.getElementById('res-promos')) document.getElementById('res-promos').value = res.promos || '';
+  if(document.getElementById('res-promos-msg')) document.getElementById('res-promos-msg').value = res.promosMsg || '';
+}
+
+// ═══════════════════════════════════════════════
+// HISTORIAL DE CHATS
+// ═══════════════════════════════════════════════
+var currentChatPhone = null;
+var botPaused = {};
+
+function loadChatHistory(){
+  var el = document.getElementById('activeConvs');
+  if(!el) return;
+  var ps = getP().filter(function(p){ return p.msgs > 0; });
+  if(!ps.length){
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">No hay conversaciones activas todavía.</div>';
+    return;
+  }
+  var html = '<div class="tbl">';
+  html += '<div class="tbl-hdr" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 120px">';
+  html += '<div>Prospecto</div><div>Rubro</div><div>Mensajes</div><div>Canal</div><div>Bot</div><div>Acciones</div></div>';
+  ps.forEach(function(p){
+    var paused = botPaused[p.tel || p.id] || false;
+    html += '<div class="tbl-row" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 120px">';
+    html += '<div class="p-name">'+ p.nombre +'<small>'+(p.zona||'')+'</small></div>';
+    html += '<div class="zona">'+ p.rubro +'</div>';
+    html += '<div class="zona">'+ p.msgs +' enviados</div>';
+    html += '<div class="zona">'+(p.canal||'—')+'</div>';
+    html += '<div><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:'+(paused?'#2a1a0a':'#1a2a1a')+';color:'+(paused?'var(--orange)':'var(--green)')+';">'+(paused?'Pausado':'Activo')+'</span></div>';
+    html += '<div style="display:flex;gap:4px">';
+    html += '<button class="btn btn-g" style="font-size:11px;padding:4px 8px" data-id="'+p.id+'" data-nombre="'+p.nombre+'" data-tel="'+(p.tel||'')+'" onclick="openChatHistory(this.dataset.id, this.dataset.nombre, this.dataset.tel)">💬 Ver</button>';
+    html += '</div></div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function openChatHistory(id, nombre, tel){
+  currentChatPhone = tel;
+  document.getElementById('chatHistoryTitle').textContent = '💬 ' + nombre;
+  document.getElementById('chatHistoryWrap').style.display = 'block';
+  var wrap = document.getElementById('chatHistoryMsgs');
+  // Load from localStorage conv history
+  var convs = ST.convHistory[id] || [];
+  if(!convs.length){
+    wrap.innerHTML = '<div style="color:var(--text3);font-size:13px">Sin historial guardado para este contacto.</div>';
+  } else {
+    wrap.innerHTML = convs.map(function(m){
+      var isBot = m.role === 'bot';
+      return '<div class="msg '+(isBot?'bot':'user')+'">'+ m.txt +'<div class="msg-time">'+ new Date(m.time||Date.now()).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}) +'</div></div>';
+    }).join('');
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+  var paused = botPaused[tel] || false;
+  var btn = document.getElementById('botToggleBtn');
+  if(btn) btn.textContent = paused ? '▶ Activar bot' : '⏸ Pausar bot';
+  document.getElementById('chatHistoryWrap').scrollIntoView({behavior:'smooth'});
+}
+
+function toggleBot(){
+  if(!currentChatPhone) return;
+  botPaused[currentChatPhone] = !botPaused[currentChatPhone];
+  var paused = botPaused[currentChatPhone];
+  var btn = document.getElementById('botToggleBtn');
+  if(btn) btn.textContent = paused ? '▶ Activar bot' : '⏸ Pausar bot';
+  toast(paused ? '⏸ Bot pausado para este contacto' : '▶ Bot activado');
+  loadChatHistory();
+}
+
+async function sendManualReply(){
+  var input = document.getElementById('manualReplyIn');
+  var txt = input.value.trim();
+  if(!txt || !currentChatPhone) return;
+  input.value = '';
+  var waPhone = ST.cfg['cfg-wa-phone'];
+  var waToken = ST.cfg['cfg-wa-token'];
+  if(!waPhone || !waToken){ toast('⚠ Configurá WhatsApp API en Configuración'); return; }
+  try {
+    var r = await fetch('https://graph.facebook.com/v18.0/' + waPhone + '/messages', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + waToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp', recipient_type: 'individual',
+        to: currentChatPhone, type: 'text',
+        text: { body: txt, preview_url: false }
+      })
+    });
+    var data = await r.json();
+    if(data.error) throw new Error(data.error.message);
+    var wrap = document.getElementById('chatHistoryMsgs');
+    wrap.innerHTML += '<div class="msg user">' + txt + '<div class="msg-time">Ahora · Manual</div></div>';
+    wrap.scrollTop = wrap.scrollHeight;
+    toast('✅ Mensaje enviado');
+  } catch(e) { toast('❌ Error: ' + e.message); }
+}
 // ═══════════════════════════════════════════════
 // BOT TRAINING
 // ═══════════════════════════════════════════════
