@@ -250,6 +250,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
       <span class="nav-ic">◎</span>Bot WhatsApp
       <span class="nav-badge" id="bot-notif" style="display:none">!</span>
     </button>
+    <button class="nav-item" onclick="showPanel('broadcast')"><span class="nav-ic">📡</span>Difusión Masiva</button>
     <div class="nav-lbl">Análisis</div>
     <button class="nav-item" onclick="showPanel('reportes')"><span class="nav-ic">▦</span>Reportes</button>
     <div class="nav-lbl">Sistema</div>
@@ -707,39 +708,45 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px">
         <div class="scraper-card">
           <div class="sc-title">📋 Catálogo</div>
-          <div class="sc-sub">URL que el bot envía cuando piden el catálogo.</div>
+          <div class="sc-sub">Soporta JPG, PNG o PDF. Usá el link directo de Drive.</div>
           <div class="fg" style="margin-bottom:8px">
-            <label class="flbl">URL del catálogo</label>
-            <input class="fi" id="res-catalogo" placeholder="https://drive.google.com/...">
+            <label class="flbl">URL directa (JPG/PNG/PDF)</label>
+            <input class="fi" id="res-catalogo" placeholder="https://drive.google.com/uc?export=download&id=..." oninput="previewDriveUrl('res-catalogo','res-cat-preview')">
           </div>
+          <div id="res-cat-preview" style="display:none;margin-bottom:8px"></div>
           <div class="fg">
             <label class="flbl">Mensaje que acompaña</label>
-            <input class="fi" id="res-catalogo-msg" placeholder="Acá te paso nuestro catálogo completo...">
+            <input class="fi" id="res-catalogo-msg" placeholder="Acá te paso nuestro catálogo 👇">
           </div>
+          <button class="btn btn-g" style="font-size:11px;width:100%;margin-top:6px" onclick="convertDriveUrl('res-catalogo')">🔗 Convertir link de Drive</button>
         </div>
         <div class="scraper-card">
           <div class="sc-title">💰 Lista de precios</div>
-          <div class="sc-sub">Link a la lista mayorista actualizada.</div>
+          <div class="sc-sub">Soporta JPG, PNG o PDF. Usá el link directo de Drive.</div>
           <div class="fg" style="margin-bottom:8px">
-            <label class="flbl">URL lista de precios</label>
-            <input class="fi" id="res-precios" placeholder="https://drive.google.com/...">
+            <label class="flbl">URL directa (JPG/PNG/PDF)</label>
+            <input class="fi" id="res-precios" placeholder="https://drive.google.com/uc?export=download&id=..." oninput="previewDriveUrl('res-precios','res-pre-preview')">
           </div>
+          <div id="res-pre-preview" style="display:none;margin-bottom:8px"></div>
           <div class="fg">
             <label class="flbl">Mensaje que acompaña</label>
-            <input class="fi" id="res-precios-msg" placeholder="Acá te paso la lista mayorista vigente...">
+            <input class="fi" id="res-precios-msg" placeholder="Acá te paso la lista mayorista 👇">
           </div>
+          <button class="btn btn-g" style="font-size:11px;width:100%;margin-top:6px" onclick="convertDriveUrl('res-precios')">🔗 Convertir link de Drive</button>
         </div>
         <div class="scraper-card">
           <div class="sc-title">🎯 Promociones</div>
-          <div class="sc-sub">Texto o link con las promos activas del mes.</div>
+          <div class="sc-sub">Soporta JPG, PNG o PDF. Ideal para banners visuales.</div>
           <div class="fg" style="margin-bottom:8px">
-            <label class="flbl">URL o texto de promos</label>
-            <input class="fi" id="res-promos" placeholder="https://... o texto de la promo">
+            <label class="flbl">URL directa (JPG/PNG/PDF)</label>
+            <input class="fi" id="res-promos" placeholder="https://drive.google.com/uc?export=download&id=..." oninput="previewDriveUrl('res-promos','res-pro-preview')">
           </div>
+          <div id="res-pro-preview" style="display:none;margin-bottom:8px"></div>
           <div class="fg">
             <label class="flbl">Mensaje que acompaña</label>
-            <input class="fi" id="res-promos-msg" placeholder="Esta semana tenemos...">
+            <input class="fi" id="res-promos-msg" placeholder="Mirá nuestras promos del mes 👇">
           </div>
+          <button class="btn btn-g" style="font-size:11px;width:100%;margin-top:6px" onclick="convertDriveUrl('res-promos')">🔗 Convertir link de Drive</button>
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:18px">
@@ -756,6 +763,103 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
           <button class="btn btn-g" onclick="resetTrainSim()">Reset</button>
         </div>
       </div>
+    </div>
+
+
+    <!-- DIFUSIÓN MASIVA -->
+    <div class="panel" id="panel-broadcast">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+
+        <div class="scraper-card">
+          <div class="sc-title">📡 Configurar campaña</div>
+          <div class="sc-sub">Enviá mensajes masivos usando las plantillas aprobadas por Meta.</div>
+
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Empresa</label>
+            <select class="fs" id="bc-company" onchange="switchCo(this.value);loadBroadcastContacts()">
+              <option value="niviko">NIVIKO</option>
+              <option value="broker">Broker Materiales</option>
+            </select>
+          </div>
+
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Plantilla de mensaje</label>
+            <select class="fs" id="bc-template">
+              <option value="niviko_presentacion">niviko_presentacion — Presentación inicial</option>
+              <option value="niviko_seguimiento">niviko_seguimiento — Seguimiento</option>
+              <option value="hello_world">hello_world — Test</option>
+            </select>
+          </div>
+
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Filtrar por rubro</label>
+            <select class="fs" id="bc-rubro">
+              <option value="">Todos los rubros</option>
+            </select>
+          </div>
+
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Filtrar por estado</label>
+            <select class="fs" id="bc-status">
+              <option value="nuevo">Solo nuevos (sin contactar)</option>
+              <option value="todos">Todos</option>
+              <option value="interesado">Interesados</option>
+            </select>
+          </div>
+
+          <div class="fg" style="margin-bottom:10px">
+            <label class="flbl">Delay entre mensajes (ms)</label>
+            <input class="fi" id="bc-delay" type="number" value="1500" min="1000" max="5000">
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">Mínimo 1000ms recomendado para evitar bloqueos</div>
+          </div>
+
+          <div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:12px;color:var(--text2);margin-bottom:12px">
+            <div>Contactos con WhatsApp: <span style="color:var(--green)" id="bc-wa-count">0</span></div>
+            <div>Seleccionados: <span style="color:var(--accent)" id="bc-selected-count">0</span></div>
+            <div>Tiempo estimado: <span id="bc-time-est">—</span></div>
+          </div>
+
+          <button class="btn btn-p" style="width:100%;margin-bottom:8px" onclick="startBroadcast()">📡 Iniciar difusión</button>
+          <button class="btn btn-g" style="width:100%" onclick="validateAllPhones()">🔍 Validar números WA</button>
+        </div>
+
+        <div>
+          <div class="scraper-card" style="margin-bottom:14px">
+            <div class="sc-title">📊 Estado de la campaña</div>
+            <div id="bc-status-display" style="font-size:13px;color:var(--text2);line-height:2">
+              <div>Estado: <span id="bc-state" style="color:var(--text3)">Sin iniciar</span></div>
+              <div>Enviados: <span style="color:var(--green)" id="bc-sent">0</span></div>
+              <div>Fallidos: <span style="color:var(--red)" id="bc-failed">0</span></div>
+              <div>Progreso: <span id="bc-progress">0%</span></div>
+            </div>
+            <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-top:10px">
+              <div id="bc-progress-bar" style="height:100%;background:var(--green);border-radius:3px;width:0%;transition:width .3s"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button class="btn btn-r" style="flex:1" onclick="stopBroadcast()">⏹ Detener</button>
+              <button class="btn btn-g" style="flex:1" onclick="exportBroadcastReport()">📋 Exportar reporte</button>
+            </div>
+          </div>
+
+          <div class="scraper-card">
+            <div class="sc-title">📋 Log de envíos</div>
+            <div id="bc-log" style="max-height:250px;overflow-y:auto;font-size:11px;font-family:var(--fm);color:var(--text2);line-height:1.8">
+              Los envíos aparecen acá en tiempo real...
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista de contactos seleccionados -->
+      <div class="sec-hdr">
+        <div class="sec-title">Contactos para difusión</div>
+        <div class="sec-cnt" id="bc-list-count">0</div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-g" onclick="selectAllBC()">Seleccionar todos</button>
+          <button class="btn btn-g" onclick="deselectAllBC()">Deseleccionar todos</button>
+        </div>
+      </div>
+      <div id="bc-contacts-list" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);max-height:400px;overflow-y:auto"></div>
     </div>
 
   </div><!-- /content -->
@@ -985,7 +1089,7 @@ function showPanel(n){
   ST.panel=n;
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+n).classList.add('active');
-  const t={dashboard:'Dashboard',prospectos:'Prospectos',pipeline:'Pipeline',scraper:'Scraper Maps',importar:'Importar Contactos',emails:'Campañas Email',mensajes:'Mensajes IA',training:'Entrenar Bot',bot:'Bot WhatsApp',reportes:'Reportes',config:'Configuración',setup:'Guía de Setup'};
+  const t={dashboard:'Dashboard',prospectos:'Prospectos',pipeline:'Pipeline',scraper:'Scraper Maps',importar:'Importar Contactos',emails:'Campañas Email',mensajes:'Mensajes IA',training:'Entrenar Bot',bot:'Bot WhatsApp',broadcast:'Difusión Masiva',reportes:'Reportes',config:'Configuración',setup:'Guía de Setup'};
   document.getElementById('panelTitle').textContent=t[n]||n;
   setNav(n);
   if(n==='mensajes')populateMsgSelect();
@@ -993,11 +1097,12 @@ function showPanel(n){
   if(n==='training'){loadPersona();resetTrainSim();loadResources();customPersonas=JSON.parse(localStorage.getItem('crm_personas')||'{}');faqs=JSON.parse(localStorage.getItem('crm_faqs')||'{}');loadPersona();}
   if(n==='reportes')renderReports();
   if(n==='bot'){populateSimSelect();renderActiveConvs();loadChatHistory();}
+  if(n==='broadcast'){loadBroadcastContacts();populateBCRubros();}
   if(n==='scraper')populateScraperRubros();
 }
 function setNav(n){
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
-  const map={dashboard:0,prospectos:1,pipeline:2,scraper:3,importar:4,emails:5,mensajes:6,training:7,bot:8,reportes:9,config:10,setup:11};
+  const map={dashboard:0,prospectos:1,pipeline:2,scraper:3,importar:4,emails:5,mensajes:6,training:7,bot:8,broadcast:9,reportes:10,config:11,setup:12};
   const items=document.querySelectorAll('.nav-item');
   if(items[map[n]])items[map[n]].classList.add('active');
 }
@@ -1634,10 +1739,326 @@ function copyMsg(){navigator.clipboard.writeText(ST.genMsg).then(()=>toast('📋
 
 
 
+
+// ── Drive URL helpers ──
+function convertDriveUrl(inputId){
+  var input = document.getElementById(inputId);
+  var url = input.value.trim();
+  // Extract file ID from various Drive URL formats
+  var match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if(!match) match = url.match(/id=([a-zA-Z0-9_-]+)/);
+  if(!match) match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if(match){
+    var fileId = match[1];
+    // Use uc?export=download for direct access
+    var directUrl = 'https://drive.google.com/uc?export=download&id=' + fileId;
+    input.value = directUrl;
+    toast('✅ Link convertido a URL directa');
+    previewDriveUrl(inputId, inputId.replace('res-','res-').replace('catalogo','cat').replace('precios','pre').replace('promos','pro') + '-preview');
+  } else {
+    toast('⚠ No se detectó un link de Google Drive válido');
+  }
+}
+
+function previewDriveUrl(inputId, previewId){
+  var url = document.getElementById(inputId)?.value || '';
+  var preview = document.getElementById(previewId);
+  if(!preview) return;
+  var isImg = url.match(/\.(jpg|jpeg|png|webp)/i) || url.includes('export=view');
+  var isPdf = url.match(/\.pdf/i) || (url.includes('drive.google') && !isImg);
+  if(url.startsWith('http') && isImg){
+    preview.style.display = 'block';
+    preview.innerHTML = '<img src="'+url+'" style="width:100%;border-radius:6px;max-height:120px;object-fit:cover" onerror="this.parentElement.innerHTML=\'<span style=\"color:var(--text3);font-size:11px\">Vista previa no disponible</span>\'">';
+  } else if(url.startsWith('http')){
+    preview.style.display = 'block';
+    preview.innerHTML = '<div style="background:var(--bg3);border-radius:6px;padding:8px;font-size:11px;color:var(--text2)">📄 Archivo: '+(isPdf?'PDF':'Documento')+'</div>';
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════
+// DIFUSIÓN MASIVA
+// ═══════════════════════════════════════════════
+var bcContacts = [];
+var bcSelected = [];
+var bcRunning = false;
+var bcSentCount = 0;
+var bcFailedCount = 0;
+
+function loadBroadcastContacts(){
+  var rubro = document.getElementById('bc-rubro')?.value || '';
+  var status = document.getElementById('bc-status')?.value || 'nuevo';
+  var ps = getP();
+
+  // Filter: must have WhatsApp or phone
+  var filtered = ps.filter(function(p){
+    var hasContact = (p.WhatsApp && p.WhatsApp.length > 5) || (p.tel && p.tel.length > 7);
+    var rubroMatch = !rubro || p.rubro === rubro;
+    var statusMatch = status === 'todos' || p.estado === status;
+    return hasContact && rubroMatch && statusMatch;
+  });
+
+  bcContacts = filtered;
+  bcSelected = filtered.map(function(p){ return p.id; }); // Select all by default
+
+  var waCount = filtered.filter(function(p){ return p.WhatsApp && p.WhatsApp.length > 5; }).length;
+  var el = document.getElementById('bc-wa-count');
+  if(el) el.textContent = waCount;
+  updateBCSelectedCount();
+  renderBCContacts();
+}
+
+function populateBCRubros(){
+  var sel = document.getElementById('bc-rubro');
+  if(!sel) return;
+  var rubros = RUBROS[ST.co] || [];
+  sel.innerHTML = '<option value="">Todos los rubros</option>' +
+    rubros.map(function(r){ return '<option value="'+r+'">'+r+'</option>'; }).join('');
+}
+
+function updateBCSelectedCount(){
+  var el = document.getElementById('bc-selected-count');
+  var timeEl = document.getElementById('bc-time-est');
+  var listEl = document.getElementById('bc-list-count');
+  if(el) el.textContent = bcSelected.length;
+  if(listEl) listEl.textContent = bcContacts.length;
+  var delay = parseInt(document.getElementById('bc-delay')?.value || 1500);
+  var secs = Math.ceil(bcSelected.length * delay / 1000);
+  if(timeEl) timeEl.textContent = secs < 60 ? secs+'s' : Math.ceil(secs/60)+'min';
+}
+
+function renderBCContacts(){
+  var el = document.getElementById('bc-contacts-list');
+  if(!el) return;
+  if(!bcContacts.length){
+    el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text3)">No hay contactos con número disponible para este filtro.</div>';
+    return;
+  }
+  var html = '<div style="display:grid;grid-template-columns:32px 2fr 1.2fr 1fr 1fr 1fr;padding:8px 12px;font-size:10px;font-family:var(--fm);color:var(--text3);border-bottom:1px solid var(--border);text-transform:uppercase">';
+  html += '<div></div><div>Empresa</div><div>Rubro</div><div>Zona</div><div>WhatsApp</div><div>Estado</div></div>';
+  bcContacts.forEach(function(p, i){
+    var checked = bcSelected.includes(p.id);
+    var wa = p.WhatsApp || p.tel || '';
+    var waNorm = normalizePhoneDisplay(wa);
+    var hasWA = p.WhatsApp && p.WhatsApp.length > 5;
+    var bg = i%2 ? 'background:var(--bg3)' : '';
+    html += '<div style="display:grid;grid-template-columns:32px 2fr 1.2fr 1fr 1fr 1fr;padding:8px 12px;font-size:12px;align-items:center;border-bottom:1px solid var(--border);'+bg+'">';
+    html += '<input type="checkbox" '+(checked?'checked':'')+' data-id="'+p.id+'" onchange="toggleBCContact(parseInt(this.dataset.id),this.checked)" style="accent-color:var(--accent)">';
+    html += '<div style="color:var(--text)">'+p.nombre+'</div>';
+    html += '<div style="color:var(--text2)">'+p.rubro+'</div>';
+    html += '<div style="color:var(--text3);font-size:11px">'+(p.zona||'—')+'</div>';
+    html += '<div style="color:'+(hasWA?'var(--green)':'var(--orange)')+'">'+waNorm+'</div>';
+    html += '<div><span class="sp '+(p.estado==='nuevo'?'s-nuevo':p.estado==='cliente'?'s-cliente':'s-contactado')+'">'+p.estado+'</span></div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function normalizePhoneDisplay(phone){
+  if(!phone) return '—';
+  var p = String(phone).replace(/\D/g,'');
+  if(p.length < 7) return phone + ' ⚠';
+  if(p.startsWith('54') && p.length >= 12) return '+'+p;
+  if(p.length === 10) return '+549'+p;
+  return '+'+p;
+}
+
+function normalizePhoneWA(phone){
+  if(!phone) return null;
+  var p = String(phone).replace(/\D/g,'');
+  if(!p || p.length < 7) return null;
+  if(p.startsWith('0')) p = p.slice(1);
+  if(p.length === 10) p = '549' + p;
+  else if(p.startsWith('54') && p.length === 11) p = '549' + p.slice(2);
+  if(p.length < 10 || p.length > 15) return null;
+  return p;
+}
+
+function toggleBCContact(id, checked){
+  if(checked){ if(!bcSelected.includes(id)) bcSelected.push(id); }
+  else { bcSelected = bcSelected.filter(function(x){ return x !== id; }); }
+  updateBCSelectedCount();
+}
+
+function selectAllBC(){
+  bcSelected = bcContacts.map(function(p){ return p.id; });
+  renderBCContacts();
+  updateBCSelectedCount();
+}
+
+function deselectAllBC(){
+  bcSelected = [];
+  renderBCContacts();
+  updateBCSelectedCount();
+}
+
+async function startBroadcast(){
+  if(bcRunning){ toast('⚠ Ya hay una difusión en curso'); return; }
+  var selected = bcContacts.filter(function(p){ return bcSelected.includes(p.id); });
+  if(!selected.length){ toast('⚠ Seleccioná al menos un contacto'); return; }
+
+  var template = document.getElementById('bc-template')?.value;
+  if(!template){ toast('⚠ Seleccioná una plantilla'); return; }
+
+  var waToken = ST.cfg['cfg-wa-token'];
+  var waPhone = ST.cfg['cfg-wa-phone'];
+  if(!waToken || !waPhone){ toast('⚠ Configurá WhatsApp API en Configuración'); return; }
+
+  if(!confirm('¿Enviar a '+selected.length+' contactos usando la plantilla "'+template+'"?')) return;
+
+  bcRunning = true;
+  bcSentCount = 0;
+  bcFailedCount = 0;
+
+  document.getElementById('bc-state').textContent = '🟢 Enviando...';
+  document.getElementById('bc-state').style.color = 'var(--green)';
+  addBCLog('🚀 Iniciando difusión a '+selected.length+' contactos...');
+
+  var delay = parseInt(document.getElementById('bc-delay')?.value || 1500);
+  var total = selected.length;
+  var ps = getP();
+
+  for(var i=0; i<selected.length && bcRunning; i++){
+    var p = selected[i];
+    var phone = normalizePhoneWA(p.WhatsApp || p.tel);
+
+    if(!phone){
+      bcFailedCount++;
+      addBCLog('❌ '+p.nombre+' — número inválido: '+(p.WhatsApp||p.tel));
+      updateBCProgress(i+1, total);
+      continue;
+    }
+
+    try {
+      var r = await fetch('https://graph.facebook.com/v18.0/'+waPhone+'/messages', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer '+waToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: '+'+phone,
+          type: 'template',
+          template: {
+            name: template,
+            language: { code: template.includes('niviko')||template.includes('broker') ? 'es_AR' : 'en_US' }
+          }
+        })
+      });
+      var data = await r.json();
+      if(data.error){
+        bcFailedCount++;
+        addBCLog('❌ '+p.nombre+' (+'+phone+') — '+data.error.message);
+      } else {
+        bcSentCount++;
+        addBCLog('✅ '+p.nombre+' (+'+phone+')');
+        // Update prospect status
+        var idx = ps.findIndex(function(x){ return x.id === p.id; });
+        if(idx !== -1){ ps[idx].estado = 'contactado'; ps[idx].msgs = (ps[idx].msgs||0)+1; ps[idx].canal = 'whatsapp'; }
+      }
+    } catch(e) {
+      bcFailedCount++;
+      addBCLog('❌ '+p.nombre+' — '+e.message);
+    }
+
+    updateBCProgress(i+1, total);
+    await new Promise(function(res){ setTimeout(res, delay); });
+  }
+
+  saveP_data(ps);
+  renderAll();
+  bcRunning = false;
+  document.getElementById('bc-state').textContent = '✅ Completado';
+  addBCLog('\n📊 Resultado: '+bcSentCount+' enviados, '+bcFailedCount+' fallidos');
+  toast('✅ Difusión completada: '+bcSentCount+' enviados');
+}
+
+function stopBroadcast(){
+  bcRunning = false;
+  document.getElementById('bc-state').textContent = '⏹ Detenido';
+  document.getElementById('bc-state').style.color = 'var(--orange)';
+  addBCLog('⏹ Difusión detenida por el usuario');
+  toast('⏹ Difusión detenida');
+}
+
+function updateBCProgress(current, total){
+  var pct = Math.round(current/total*100);
+  document.getElementById('bc-progress').textContent = pct+'%';
+  document.getElementById('bc-progress-bar').style.width = pct+'%';
+  document.getElementById('bc-sent').textContent = bcSentCount;
+  document.getElementById('bc-failed').textContent = bcFailedCount;
+}
+
+function addBCLog(msg){
+  var el = document.getElementById('bc-log');
+  if(!el) return;
+  el.innerHTML += msg + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+function exportBroadcastReport(){
+  var log = document.getElementById('bc-log')?.textContent || '';
+  var blob = new Blob([log], {type:'text/plain'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'difusion_'+new Date().toISOString().slice(0,10)+'.txt';
+  a.click();
+  toast('📋 Reporte exportado');
+}
+
+// ── Validar números WA masivo ──
+async function validateAllPhones(){
+  var ps = getP();
+  var toValidate = ps.filter(function(p){ return p.tel && p.tel.length > 6 && !p.WhatsApp; });
+  if(!toValidate.length){ toast('✅ Todos los contactos ya tienen WhatsApp validado'); return; }
+    if(!confirm('Validar numeros para verificar WhatsApp? Puede tardar varios minutos.')) return;
+
+  toast('🔍 Validando '+toValidate.length+' números...');
+  addBCLog('🔍 Validando '+toValidate.length+' números...');
+
+  var waToken = ST.cfg['cfg-wa-token'];
+  var waPhone = ST.cfg['cfg-wa-phone'];
+  var updated = 0;
+
+  for(var i=0; i<toValidate.length; i++){
+    var p = toValidate[i];
+    var phone = normalizePhoneWA(p.tel);
+    if(!phone) continue;
+
+    try {
+      var r = await fetch('https://graph.facebook.com/v18.0/'+waPhone+'/contacts', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer '+waToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blocking: 'wait', contacts: ['+'+phone], force_check: true })
+      });
+      var data = await r.json();
+      var contact = data.contacts?.[0];
+      if(contact?.status === 'valid'){
+        var idx = ps.findIndex(function(x){ return x.id === p.id; });
+        if(idx !== -1){ ps[idx].WhatsApp = contact.wa_id || phone; updated++; }
+        addBCLog('✅ WA: '+p.nombre+' ('+phone+')');
+      } else {
+        addBCLog('📞 Solo tel: '+p.nombre);
+      }
+    } catch(e) { /* silent */ }
+
+    if(i%10===0 && i>0){
+      toast('🔍 Validados '+(i+1)+'/'+toValidate.length+'...');
+      saveP_data(ps);
+    }
+    await new Promise(function(res){ setTimeout(res, 200); });
+  }
+
+  saveP_data(ps);
+  renderAll();
+  loadBroadcastContacts();
+  toast('✅ Validación completa: '+updated+' números tienen WhatsApp');
+}
 // ═══════════════════════════════════════════════
 // RECURSOS DEL BOT
 // ═══════════════════════════════════════════════
-function saveResources(){
+async function saveResources(){
+  var co = document.getElementById('train-co') ? document.getElementById('train-co').value : ST.co;
   var res = {
     catalogo: document.getElementById('res-catalogo')?.value || '',
     catalogoMsg: document.getElementById('res-catalogo-msg')?.value || '',
@@ -1646,12 +2067,22 @@ function saveResources(){
     promos: document.getElementById('res-promos')?.value || '',
     promosMsg: document.getElementById('res-promos-msg')?.value || ''
   };
-  localStorage.setItem('crm_resources', JSON.stringify(res));
-  toast('✅ Recursos guardados');
+  localStorage.setItem('crm_resources_'+co, JSON.stringify(res));
+  // Save to Firebase if configured
+  var fbCfg = ST.cfg['cfg-firebase'];
+  if(fbCfg){
+    try{
+      var cfg = JSON.parse(fbCfg);
+      var url = 'https://'+cfg.projectId+'-default-rtdb.firebaseio.com/resources/'+co+'.json';
+      await fetch(url, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(res)});
+    }catch(e){console.error('Firebase save error:',e);}
+  }
+  toast('✅ Recursos guardados — el bot los usará automáticamente');
 }
 
 function loadResources(){
-  var res = JSON.parse(localStorage.getItem('crm_resources') || '{}');
+  var co = document.getElementById('train-co') ? document.getElementById('train-co').value : ST.co;
+  var res = JSON.parse(localStorage.getItem('crm_resources_'+co) || '{}');
   if(document.getElementById('res-catalogo')) document.getElementById('res-catalogo').value = res.catalogo || '';
   if(document.getElementById('res-catalogo-msg')) document.getElementById('res-catalogo-msg').value = res.catalogoMsg || '';
   if(document.getElementById('res-precios')) document.getElementById('res-precios').value = res.precios || '';
