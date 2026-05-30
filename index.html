@@ -2097,34 +2097,122 @@ function loadResources(){
 var currentChatPhone = null;
 var botPaused = {};
 
-function loadChatHistory(){
+async function loadChatHistory(){
   var el = document.getElementById('activeConvs');
   if(!el) return;
-  var ps = getP().filter(function(p){ return p.msgs > 0; });
-  if(!ps.length){
-    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px">No hay conversaciones activas todavía.</div>';
+  el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Cargando conversaciones...</div>';
+
+  // Try Firebase first
+  var fbConvs = await fbGetConversations();
+  if(fbConvs && Object.keys(fbConvs).length > 0){
+    renderChatList(fbConvs);
     return;
   }
-  var html = '<div class="tbl">';
-  html += '<div class="tbl-hdr" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 120px">';
-  html += '<div>Prospecto</div><div>Rubro</div><div>Mensajes</div><div>Canal</div><div>Bot</div><div>Acciones</div></div>';
+
+  // Fallback to local prospects with msgs
+  var ps = getP().filter(function(p){ return p.msgs > 0; });
+  if(!ps.length){
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px;text-align:center">No hay conversaciones activas todavía.<br><span style="font-size:11px">Las conversaciones del bot aparecen acá automáticamente.</span></div>';
+    return;
+  }
+  var fbConvsLocal = {};
   ps.forEach(function(p){
-    var paused = botPaused[p.tel || p.id] || false;
-    html += '<div class="tbl-row" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 120px">';
-    html += '<div class="p-name">'+ p.nombre +'<small>'+(p.zona||'')+'</small></div>';
-    html += '<div class="zona">'+ p.rubro +'</div>';
-    html += '<div class="zona">'+ p.msgs +' enviados</div>';
-    html += '<div class="zona">'+(p.canal||'—')+'</div>';
-    html += '<div><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:'+(paused?'#2a1a0a':'#1a2a1a')+';color:'+(paused?'var(--orange)':'var(--green)')+';">'+(paused?'Pausado':'Activo')+'</span></div>';
-    html += '<div style="display:flex;gap:4px">';
-    html += '<button class="btn btn-g" style="font-size:11px;padding:4px 8px" data-id="'+p.id+'" data-nombre="'+p.nombre+'" data-tel="'+(p.tel||'')+'" onclick="openChatHistory(this.dataset.id, this.dataset.nombre, this.dataset.tel)">💬 Ver</button>';
-    html += '</div></div>';
+    var phone = p.WhatsApp || p.tel || '';
+    if(phone) fbConvsLocal[phone] = { phone, lastMessage:'—', lastTs: Date.now(), company: ST.co, status:'active', prospect: p };
+  });
+  renderChatList(fbConvsLocal);
+}
+
+function renderChatList(convs){
+  var el = document.getElementById('activeConvs');
+  if(!el) return;
+  var list = Object.values(convs).sort(function(a,b){ return (b.lastTs||0)-(a.lastTs||0); });
+  if(!list.length){
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px;text-align:center">No hay conversaciones activas.</div>';
+    return;
+  }
+  var html = '<div class="tbl"><div class="tbl-hdr" style="grid-template-columns:1.5fr 2fr 1fr 1fr 100px"><div>Número</div><div>Último mensaje</div><div>Estado</div><div>Hora</div><div>Acción</div></div>';
+  list.forEach(function(c){
+    var phone = c.phone || '';
+    var time = c.lastTs ? new Date(c.lastTs).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}) : '—';
+    var date = c.lastTs ? new Date(c.lastTs).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '';
+    var status = c.status === 'escalated' ? '<span style="color:var(--orange);font-size:11px">⚡ Escalado</span>' : '<span style="color:var(--green);font-size:11px">🤖 Bot activo</span>';
+    var lastMsg = (c.lastMessage||'').slice(0,50);
+    var ps = getP();
+    var prospect = ps.find(function(p){ return p.WhatsApp===phone||p.tel===phone; });
+    var nombre = prospect ? prospect.nombre : '+'+phone;
+    html += '<div class="tbl-row" style="grid-template-columns:1.5fr 2fr 1fr 1fr 100px">';
+    html += '<div class="p-name">'+nombre+'<small>+'+phone+'</small></div>';
+    html += '<div style="font-size:12px;color:var(--text2)">'+lastMsg+'</div>';
+    html += '<div>'+status+'</div>';
+    html += '<div style="font-size:11px;color:var(--text3)">'+date+' '+time+'</div>';
+    html += '<div><button class="btn btn-g" style="font-size:11px;padding:4px 8px" data-phone="'+phone+'" data-nombre="'+nombre+'" onclick="openChatFromFirebase(this.dataset.phone,this.dataset.nombre)">💬 Ver</button></div>';
+    html += '</div>';
   });
   html += '</div>';
   el.innerHTML = html;
 }
 
-function openChatHistory(id, nombre, tel){
+async function fbGetConversations(){
+  var cfg = ST.cfg['cfg-firebase'];
+  if(!cfg) return null;
+  try{
+    var fbCfg = JSON.parse(cfg);
+    var url = 'https://'+fbCfg.projectId+'-default-rtdb.firebaseio.com/conversations.json?orderBy="lastTs"&limitToLast=50';
+    var r = await fetch(url);
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(e){ return null; }
+}
+
+async function openChatFromFirebase(phone, nombre){
+  currentChatPhone = phone;
+  document.getElementById('chatHistoryTitle').textContent = '💬 ' + nombre + ' (+'+phone+')';
+  document.getElementById('chatHistoryWrap').style.display = 'block';
+  var wrap = document.getElementById('chatHistoryMsgs');
+  wrap.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Cargando...</div>';
+
+  // Load from Firebase
+  var cfg = ST.cfg['cfg-firebase'];
+  var messages = [];
+  if(cfg){
+    try{
+      var fbCfg = JSON.parse(cfg);
+      var url = 'https://'+fbCfg.projectId+'-default-rtdb.firebaseio.com/conversations/'+phone+'/messages.json';
+      var r = await fetch(url);
+      if(r.ok) messages = await r.json() || [];
+    }catch(e){}
+  }
+
+  if(!messages || !messages.length){
+    // Fallback to local history
+    var ps = getP();
+    var p = ps.find(function(x){ return x.WhatsApp===phone||x.tel===phone; });
+    if(p && ST.convHistory[p.id]) messages = ST.convHistory[p.id].map(function(m){ return {role:m.role==='bot'?'assistant':'user',content:m.txt,ts:m.time}; });
+  }
+
+  if(!messages || !messages.length){
+    wrap.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">Sin historial disponible. Los mensajes nuevos aparecerán acá.</div>';
+  } else {
+    var html = '';
+    (Array.isArray(messages) ? messages : Object.values(messages)).forEach(function(m){
+      var isBot = m.role === 'assistant';
+      var time = m.ts ? new Date(m.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}) : '';
+      html += '<div class="msg '+(isBot?'bot':'user')+'">'+m.content+'<div class="msg-time">'+time+(isBot?' · Bot':' · Cliente')+'</div></div>';
+    });
+    wrap.innerHTML = html;
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  var paused = botPaused[phone] || false;
+  var btn = document.getElementById('botToggleBtn');
+  if(btn) btn.textContent = paused ? '▶ Activar bot' : '⏸ Pausar bot';
+  document.getElementById('chatHistoryWrap').scrollIntoView({behavior:'smooth'});
+}
+
+function openChatHistory(id, nombre, tel){ openChatFromFirebase(tel, nombre); return;
+  // legacy below
+
   currentChatPhone = tel;
   document.getElementById('chatHistoryTitle').textContent = '💬 ' + nombre;
   document.getElementById('chatHistoryWrap').style.display = 'block';
