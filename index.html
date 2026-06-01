@@ -855,6 +855,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
         <div class="sec-title">Contactos para difusión</div>
         <div class="sec-cnt" id="bc-list-count">0</div>
         <div style="margin-left:auto;display:flex;gap:8px">
+          <input class="srch" id="bc-search" placeholder="Buscar nombre o número..." style="width:200px" oninput="filterBCContacts()">
           <button class="btn btn-g" onclick="selectAllBC()">Seleccionar todos</button>
           <button class="btn btn-g" onclick="deselectAllBC()">Deseleccionar todos</button>
         </div>
@@ -1855,6 +1856,43 @@ function renderBCContacts(){
   el.innerHTML = html;
 }
 
+
+function filterBCContacts(){
+  var q = (document.getElementById('bc-search')?.value || '').toLowerCase();
+  if(!q){ renderBCContacts(); return; }
+  var filtered = bcContacts.filter(function(p){
+    return p.nombre.toLowerCase().includes(q) ||
+           (p.WhatsApp||'').includes(q) ||
+           (p.tel||'').includes(q) ||
+           (p.zona||'').toLowerCase().includes(q);
+  });
+  // Render filtered subset
+  var el = document.getElementById('bc-contacts-list');
+  if(!el) return;
+  if(!filtered.length){
+    el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text3)">Sin resultados para "'+q+'"</div>';
+    return;
+  }
+  var html = '<div style="display:grid;grid-template-columns:32px 2fr 1.2fr 1fr 1fr 1fr;padding:8px 12px;font-size:10px;font-family:var(--fm);color:var(--text3);border-bottom:1px solid var(--border);text-transform:uppercase">';
+  html += '<div></div><div>Empresa</div><div>Rubro</div><div>Zona</div><div>WhatsApp</div><div>Estado</div></div>';
+  filtered.forEach(function(p,i){
+    var checked = bcSelected.includes(p.id);
+    var wa = p.WhatsApp || p.tel || '';
+    var hasWA = p.WhatsApp && p.WhatsApp.length > 5;
+    var bg = i%2 ? 'background:var(--bg3)' : '';
+    html += '<div style="display:grid;grid-template-columns:32px 2fr 1.2fr 1fr 1fr 1fr;padding:8px 12px;font-size:12px;align-items:center;border-bottom:1px solid var(--border);'+bg+'">';
+    html += '<input type="checkbox" '+(checked?'checked':'')+' data-id="'+p.id+'" onchange="toggleBCContact(parseInt(this.dataset.id),this.checked)" style="accent-color:var(--accent)">';
+    html += '<div style="color:var(--text)">'+p.nombre+'</div>';
+    html += '<div style="color:var(--text2)">'+p.rubro+'</div>';
+    html += '<div style="color:var(--text3);font-size:11px">'+(p.zona||'—')+'</div>';
+    html += '<div style="color:'+(hasWA?'var(--green)':'var(--orange)')+'">'+normalizePhoneDisplay(wa)+'</div>';
+    html += '<div><span class="sp '+(p.estado==='nuevo'?'s-nuevo':p.estado==='cliente'?'s-cliente':'s-contactado')+'">'+p.estado+'</span></div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
 function normalizePhoneDisplay(phone){
   if(!phone) return '—';
   var p = String(phone).replace(/\D/g,'');
@@ -1937,7 +1975,7 @@ async function startBroadcast(){
         body: JSON.stringify({
           messaging_product: 'whatsapp',
           recipient_type: 'individual',
-          to: '+'+phone,
+          to: phone.replace(/\D/g,'').replace(/^\+/,''),
           type: 'template',
           template: {
             name: template,
