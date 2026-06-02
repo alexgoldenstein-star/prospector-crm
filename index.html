@@ -293,11 +293,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
       <div id="dash-recent"></div>
       <div style="margin-top:20px" class="sec-hdr"><div class="sec-title">Acciones rápidas</div></div>
       <div style="display:flex;gap:9px;flex-wrap:wrap;">
-        <button class="btn btn-g" onclick="showPanel('scraper');setNav('scraper')">⊕ Buscar en Google Maps</button>
-        <button class="btn btn-g" onclick="showPanel('importar');setNav('importar')">↑ Importar Excel/CSV</button>
-        <button class="btn btn-g" onclick="showPanel('mensajes');setNav('mensajes')">✦ Generar mensaje IA</button>
-        <button class="btn btn-g" onclick="showPanel('reportes');setNav('reportes')">▦ Ver reporte</button>
-      </div>
+          <button class="btn btn-g" onclick="showPanel('scraper');setNav('scraper')">⊕ Buscar en Google Maps</button>
+          <button class="btn btn-g" onclick="showPanel('importar');setNav('importar')">↑ Importar Excel/CSV</button>
+          <button class="btn btn-g" onclick="showPanel('mensajes');setNav('mensajes')">✦ Generar mensaje IA</button>
+          <button class="btn btn-g" onclick="showPanel('reportes');setNav('reportes')">▦ Ver reporte</button>
+          <button class="btn btn-p" onclick="enrichAllProspects()" style="background:var(--accent-b)">🔍 Enriquecer base</button>
+          <button class="btn btn-p" onclick="showPanel('broadcast');setNav('broadcast');setTimeout(validateAllPhones,500)" style="background:#25d366;color:#000">💬 Validar WA y Difundir</button>
+        </div>
     </div>
 
     <!-- PROSPECTOS -->
@@ -1940,7 +1942,7 @@ async function startBroadcast(){
   if(!template){ toast('⚠ Seleccioná una plantilla'); return; }
 
   var waToken = ST.cfg['cfg-wa-token'];
-  var waPhone = ST.cfg['cfg-wa-phone'];
+  var waPhone = ST.cfg['cfg-wa-phone'] || ST.cfg['cfg-wa-appid'];
   if(!waToken || !waPhone){ toast('⚠ Configurá WhatsApp API en Configuración'); return; }
 
   if(!confirm('¿Enviar a '+selected.length+' contactos usando la plantilla "'+template+'"?')) return;
@@ -2055,7 +2057,7 @@ async function validateAllPhones(){
   addBCLog('🔍 Validando '+toValidate.length+' números...');
 
   var waToken = ST.cfg['cfg-wa-token'];
-  var waPhone = ST.cfg['cfg-wa-phone'];
+  var waPhone = ST.cfg['cfg-wa-phone'] || ST.cfg['cfg-wa-appid'];
   var updated = 0;
 
   for(var i=0; i<toValidate.length; i++){
@@ -2230,7 +2232,7 @@ async function openChatFromFirebase(phone, nombre){
   }
 
   if(!messages || !messages.length){
-    wrap.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">Sin historial disponible. Los mensajes nuevos aparecerán acá.</div>';
+    wrap.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">Sin historial guardado. Los próximos mensajes aparecerán acá en tiempo real.</div>';
   } else {
     var html = '';
     (Array.isArray(messages) ? messages : Object.values(messages)).forEach(function(m){
@@ -2285,28 +2287,26 @@ function toggleBot(){
 async function sendManualReply(){
   var input = document.getElementById('manualReplyIn');
   var txt = input.value.trim();
-  if(!txt || !currentChatPhone) return;
+  if(!txt || !currentChatPhone){ toast('Selecciona un contacto'); return; }
   input.value = '';
-  var waPhone = ST.cfg['cfg-wa-phone'];
+  var waPhone = ST.cfg['cfg-wa-phone'] || ST.cfg['cfg-wa-appid'];
   var waToken = ST.cfg['cfg-wa-token'];
-  if(!waPhone || !waToken){ toast('⚠ Configurá WhatsApp API en Configuración'); return; }
+  if(!waPhone || !waToken){ toast('Configura WhatsApp API en Configuracion'); return; }
+  var cleanPhone = currentChatPhone.toString().split('').filter(function(c){return c>='0'&&c<='9';}).join('');
+  if(!cleanPhone){ toast('Numero invalido: '+currentChatPhone); return; }
   try {
-    var r = await fetch('https://graph.facebook.com/v18.0/' + waPhone + '/messages', {
+    var payload = {messaging_product:'whatsapp',recipient_type:'individual',to:cleanPhone,type:'text',text:{body:txt,preview_url:false}};
+    var r = await fetch('https://graph.facebook.com/v18.0/'+waPhone+'/messages', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + waToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp', recipient_type: 'individual',
-        to: currentChatPhone, type: 'text',
-        text: { body: txt, preview_url: false }
-      })
+      headers: { 'Authorization': 'Bearer '+waToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
     var data = await r.json();
-    if(data.error) throw new Error(data.error.message);
+    if(data.error) throw new Error(data.error.message+' ('+data.error.code+')');
     var wrap = document.getElementById('chatHistoryMsgs');
-    wrap.innerHTML += '<div class="msg user">' + txt + '<div class="msg-time">Ahora · Manual</div></div>';
-    wrap.scrollTop = wrap.scrollHeight;
-    toast('✅ Mensaje enviado');
-  } catch(e) { toast('❌ Error: ' + e.message); }
+    if(wrap){ wrap.innerHTML += '<div class="msg user">'+txt+'<div class="msg-time">Ahora - Vos</div></div>'; wrap.scrollTop=wrap.scrollHeight; }
+    toast('Enviado a +'+cleanPhone);
+  } catch(e) { toast('Error: '+e.message); }
 }
 // ═══════════════════════════════════════════════
 // BOT TRAINING
