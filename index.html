@@ -968,7 +968,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
           <button class="btn btn-g" style="justify-content:flex-start" onclick="closeM('editP');showPanel('mensajes');setNav('mensajes')">✦ Generar mensaje IA</button>
           <button class="btn btn-g" style="justify-content:flex-start" onclick="closeM('editP');openBotSim(parseInt(document.getElementById('ep-id').value))">🤖 Simular bot</button>
           <button class="btn btn-g" style="justify-content:flex-start" onclick="enrichProspect(parseInt(document.getElementById('ep-id').value))">🔍 Enriquecer con Maps/Web</button>
-          <button class="btn btn-g" style="justify-content:flex-start" onclick="openWA(document.getElementById('ep-tel').value)" id="ep-open-wa">💬 Abrir WhatsApp</button>
+          <button class="btn btn-g" style="justify-content:flex-start" onclick="openWA(document.getElementById('ep-tel').value)" id="ep-open-wa">💬 Abrir WhatsApp (bot)</button>
+          <button class="btn btn-g" style="justify-content:flex-start;background:rgba(37,211,102,0.12);border-color:#25d366;color:#25d366" onclick="openWAVendedor(document.getElementById('ep-tel').value, document.getElementById('ep-nombre').value)">📲 Seguimiento personal (mi WA)</button>
         </div>
       </div>
     </div>
@@ -1982,7 +1983,7 @@ async function startBroadcast(){
           type: 'template',
           template: {
             name: template,
-            language: { code: template.includes('niviko')||template.includes('broker') ? 'es_AR' : 'en_US' }
+            language: { code: 'es' }
           }
         })
       });
@@ -2048,23 +2049,58 @@ function exportBroadcastReport(){
 }
 
 // ── Validar números WA masivo ──
-async function validateAllPhones(){
-  var ps = getP();
-  var toValidate = ps.filter(function(p){ return p.tel && p.tel.length > 6 && !p.WhatsApp; });
-  if(!toValidate.length){ toast('✅ Todos los contactos ya tienen WhatsApp validado'); return; }
-    if(!confirm('Validar numeros para verificar WhatsApp? Puede tardar varios minutos.')) return;
+// ─── Enriquecimiento completo de base ───────────
+// Paso 1: normaliza teléfonos, Paso 2: valida WA, Paso 3: guarda
+async function validateAllPhones(){ await enrichBase(); }
 
-  toast('🔍 Validando '+toValidate.length+' números...');
-  addBCLog('🔍 Validando '+toValidate.length+' números...');
+async function enrichBase(){
+  var ps = getP();
+  // Normalizar TODOS los teléfonos primero
+  var fixedNorm = 0;
+  ps.forEach(function(p){
+    var rawTel = p.tel || p.WhatsApp || '';
+    if(!rawTel) return;
+    var norm = normalizePhoneWA(rawTel);
+    if(norm && p.tel !== norm){ p.tel = norm; fixedNorm++; }
+  });
+  if(fixedNorm > 0){ saveP_data(ps); toast('📞 '+fixedNorm+' números normalizados'); }
+
+  // Filtrar los que no tienen WA validado pero tienen tel
+  var toValidate = ps.filter(function(p){
+    var tel = p.tel || '';
+    return tel.length > 6 && !p.WhatsApp;
+  });
 
   var waToken = ST.cfg['cfg-wa-token'];
-  var waPhone = ST.cfg['cfg-wa-phone'] || ST.cfg['cfg-wa-appid'];
-  var updated = 0;
+  var waPhoneRaw = ST.cfg['cfg-wa-phone'] || ST.cfg['cfg-wa-appid'];
+  var waPhone = (waPhoneRaw||'').toString().replace(/[^0-9]/g,'');
+
+  if(!toValidate.length){
+    toast('✅ Base completa: todos los teléfonos ya están validados');
+    renderAll(); loadBroadcastContacts(); return;
+  }
+
+  if(!waToken || !waPhone){ toast('⚠ Configurá WhatsApp API para validar números'); return; }
+  if(!confirm('Se van a validar '+toValidate.length+' números contra WhatsApp.\n\nEsto puede tardar varios minutos. ¿Continuar?')) return;
+
+  // Mostrar panel de log si no está visible
+  var logEl = document.getElementById('bc-log');
+  if(logEl) logEl.style.display = 'block';
+
+  addBCLog('🔍 Iniciando enriquecimiento: '+toValidate.length+' contactos a validar...');
+  addBCLog('📞 Números normalizados en este paso: '+fixedNorm);
+
+  var waUpdated = 0, waFailed = 0, waInvalid = 0;
 
   for(var i=0; i<toValidate.length; i++){
     var p = toValidate[i];
     var phone = normalizePhoneWA(p.tel);
-    if(!phone) continue;
+
+    if(!phone){
+      waInvalid++;
+      if(i < 20) addBCLog('⚠ Número inválido: '+p.nombre+' ('+p.tel+')');
+      continue;
+    }
 
     try {
       var r = await fetch('https://graph.facebook.com/v18.0/'+waPhone+'/contacts', {
@@ -2073,27 +2109,42 @@ async function validateAllPhones(){
         body: JSON.stringify({ blocking: 'wait', contacts: ['+'+phone], force_check: true })
       });
       var data = await r.json();
+      if(data.error){ waFailed++; continue; }
       var contact = data.contacts?.[0];
-      if(contact?.status === 'valid'){
+      if(contact && contact.status === 'valid'){
         var idx = ps.findIndex(function(x){ return x.id === p.id; });
-        if(idx !== -1){ ps[idx].WhatsApp = contact.wa_id || phone; updated++; }
-        addBCLog('✅ WA: '+p.nombre+' ('+phone+')');
+        if(idx !== -1){
+          ps[idx].WhatsApp = contact.wa_id || phone;
+          ps[idx].tel = contact.wa_id || phone;
+          waUpdated++;
+        }
+        addBCLog('✅ WA confirmado: '+p.nombre+' (+'+phone+')');
       } else {
-        addBCLog('📞 Solo tel: '+p.nombre);
+        waFailed++;
+        if(i < 30) addBCLog('📞 Sin WA: '+p.nombre+' (+'+phone+')');
       }
-    } catch(e) { /* silent */ }
+    } catch(e) { waFailed++; }
 
-    if(i%10===0 && i>0){
-      toast('🔍 Validados '+(i+1)+'/'+toValidate.length+'...');
+    // Guardar cada 15 contactos
+    if(i%15===0 && i>0){
       saveP_data(ps);
+      toast('🔍 Validando... '+(i+1)+'/'+toValidate.length+' (✅'+waUpdated+' WA encontrados)');
     }
-    await new Promise(function(res){ setTimeout(res, 200); });
+    await new Promise(function(res){ setTimeout(res, 300); });
   }
 
   saveP_data(ps);
   renderAll();
   loadBroadcastContacts();
-  toast('✅ Validación completa: '+updated+' números tienen WhatsApp');
+
+  var resumen = '━━━━━━━━━━━━━━━━\n📊 RESULTADO ENRIQUECIMIENTO\n'
+    +'📞 Normalizados: '+fixedNorm+'\n'
+    +'✅ WA nuevos: '+waUpdated+'\n'
+    +'❌ Sin WA: '+waFailed+'\n'
+    +'⚠ Inválidos: '+waInvalid+'\n'
+    +'📱 Total WA en base: '+ps.filter(function(p){ return !!p.WhatsApp; }).length;
+  addBCLog(resumen);
+  toast('✅ Enriquecimiento completo: '+waUpdated+' nuevos WhatsApp encontrados');
 }
 // ═══════════════════════════════════════════════
 // RECURSOS DEL BOT
@@ -3081,7 +3132,21 @@ async function enrichProspect(id){
 // ═══════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════
-function openWA(tel){window.open(`https://wa.me/${tel}`,'_blank');}
+function openWA(tel){
+  var clean = (tel||'').toString().replace(/[^0-9]/g,'');
+  if(!clean){ toast('Sin número cargado'); return; }
+  window.open('https://wa.me/'+clean,'_blank');
+}
+
+function openWAVendedor(tel, nombre){
+  var clean = (tel||'').toString().replace(/[^0-9]/g,'');
+  if(!clean){ toast('Sin número cargado para este contacto'); return; }
+  // Usar número de vendedor si está configurado, sino abrir directo
+  var vendedorWA = ST.cfg['cfg-vendedor-wa'] || '';
+  var co = ST.co === 'broker' ? 'Broker Materiales' : 'NIVIKO';
+  var msg = 'Hola '+nombre+', te escribo de '+co+'. ¿Cómo te puedo ayudar?';
+  window.open('https://wa.me/'+clean+'?text='+encodeURIComponent(msg),'_blank');
+}
 function openMail(e){window.open(`mailto:${e}`,'_blank');}
 function openIG(ig){window.open(`https://instagram.com/${ig.replace('@','')}`,'_blank');}
 function toast(msg){
