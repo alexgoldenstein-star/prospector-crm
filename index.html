@@ -609,7 +609,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
       <div class="cfg-section">
         <div class="cfg-title">WhatsApp Business API <span class="cfg-badge">Mensajería</span></div>
         <div class="fg-row">
-          <div class="fg half"><label class="flbl">Phone Number ID</label><input class="fi" id="cfg-wa-phone" placeholder="1234567890" oninput="saveConfig()"></div>
+          <div class="fg half"><label class="flbl">Phone Number ID</label><input class="fi" id="cfg-wa-phone" placeholder="Ej: 1054213564451613 (Phone Number ID de Meta)" oninput="saveConfig()"></div>
           <div class="fg half"><label class="flbl">Access Token</label><input class="fi" type="password" id="cfg-wa-token" placeholder="EAAxxxx..." oninput="saveConfig()"></div>
         </div>
         <div class="fg-row" style="margin-top:10px">
@@ -1942,7 +1942,8 @@ async function startBroadcast(){
   if(!template){ toast('⚠ Seleccioná una plantilla'); return; }
 
   var waToken = ST.cfg['cfg-wa-token'];
-  var waPhone = ST.cfg['cfg-wa-phone'] || ST.cfg['cfg-wa-appid'];
+  var waPhoneRaw = ST.cfg['cfg-wa-phone'] || ST.cfg['cfg-wa-appid'];
+  var waPhone = (waPhoneRaw||'').toString().replace(/[^0-9]/g,'');
   if(!waToken || !waPhone){ toast('⚠ Configurá WhatsApp API en Configuración'); return; }
 
   if(!confirm('¿Enviar a '+selected.length+' contactos usando la plantilla "'+template+'"?')) return;
@@ -2186,7 +2187,8 @@ function renderChatList(convs){
     html += '<div style="font-size:12px;color:var(--text2)">'+lastMsg+'</div>';
     html += '<div>'+status+'</div>';
     html += '<div style="font-size:11px;color:var(--text3)">'+date+' '+time+'</div>';
-    html += '<div><button class="btn btn-g" style="font-size:11px;padding:4px 8px" data-phone="'+phone+'" data-nombre="'+nombre+'" onclick="openChatFromFirebase(this.dataset.phone,this.dataset.nombre)">💬 Ver</button></div>';
+    var phoneClean = phone.toString().replace(/[^0-9]/g,'');
+    html += '<div><button class="btn btn-g" style="font-size:11px;padding:4px 8px" data-phone="'+phoneClean+'" data-nombre="'+nombre+'" onclick="openChatFromFirebase(this.dataset.phone,this.dataset.nombre)">💬 Ver</button></div>';
     html += '</div>';
   });
   html += '</div>';
@@ -2206,8 +2208,9 @@ async function fbGetConversations(){
 }
 
 async function openChatFromFirebase(phone, nombre){
-  currentChatPhone = phone.toString().replace(/[^0-9]/g,'');
-  document.getElementById('chatHistoryTitle').textContent = '💬 ' + nombre + ' (+'+phone+')';
+  var cleanPhone = phone.toString().replace(/[^0-9]/g,'');
+  currentChatPhone = cleanPhone;
+  document.getElementById('chatHistoryTitle').textContent = '💬 ' + nombre + ' (+'+cleanPhone+')';
   document.getElementById('chatHistoryWrap').style.display = 'block';
   var wrap = document.getElementById('chatHistoryMsgs');
   wrap.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Cargando...</div>';
@@ -2218,7 +2221,7 @@ async function openChatFromFirebase(phone, nombre){
   if(cfg){
     try{
       var fbCfg = JSON.parse(cfg);
-      var url = 'https://'+fbCfg.projectId+'-default-rtdb.firebaseio.com/conversations/'+phone+'/messages.json';
+      var url = 'https://'+fbCfg.projectId+'-default-rtdb.firebaseio.com/conversations/'+cleanPhone+'/messages.json';
       var r = await fetch(url);
       if(r.ok) messages = await r.json() || [];
     }catch(e){}
@@ -2289,11 +2292,19 @@ async function sendManualReply(){
   var txt = input.value.trim();
   if(!txt || !currentChatPhone){ toast('Selecciona un contacto'); return; }
   input.value = '';
-  var waPhone = ST.cfg['cfg-wa-phone'] || ST.cfg['cfg-wa-appid'];
+  var waPhoneRaw = ST.cfg['cfg-wa-phone'] || ST.cfg['cfg-wa-appid'];
   var waToken = ST.cfg['cfg-wa-token'];
-  if(!waPhone || !waToken){ toast('Configura WhatsApp API en Configuracion'); return; }
-  var cleanPhone = currentChatPhone.toString().split('').filter(function(c){return c>='0'&&c<='9';}).join('');
-  if(!cleanPhone){ toast('Numero invalido: '+currentChatPhone); return; }
+  if(!waPhoneRaw || !waToken){ toast('Configurá WhatsApp API en Configuración'); return; }
+  // Validar que cfg-wa-phone sea el Phone Number ID (solo dígitos, no el número del bot)
+  var waPhone = waPhoneRaw.toString().replace(/[^0-9]/g,'');
+  if(waPhone.length < 10){ toast('⚠ Phone Number ID inválido en Configuración. Debe ser el ID numérico largo (ej: 1054213564451613)'); return; }
+  // Si parece un número argentino en lugar del Phone ID, avisar
+  if(waPhone.startsWith('549') && waPhone.length <= 13){
+    toast('⚠ En Configuración, el campo Phone Number ID tiene el número del bot. Debe ser el ID de 16 dígitos de Meta Business.');
+    return;
+  }
+  var cleanPhone = currentChatPhone.toString().replace(/[^0-9]/g,'');
+  if(!cleanPhone){ toast('Número inválido: '+currentChatPhone); return; }
   try {
     var payload = {messaging_product:'whatsapp',recipient_type:'individual',to:cleanPhone,type:'text',text:{body:txt,preview_url:false}};
     var r = await fetch('https://graph.facebook.com/v18.0/'+waPhone+'/messages', {
