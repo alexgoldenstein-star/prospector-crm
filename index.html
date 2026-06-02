@@ -2206,7 +2206,7 @@ async function fbGetConversations(){
 }
 
 async function openChatFromFirebase(phone, nombre){
-  currentChatPhone = phone;
+  currentChatPhone = phone.toString().replace(/[^0-9]/g,'');
   document.getElementById('chatHistoryTitle').textContent = '💬 ' + nombre + ' (+'+phone+')';
   document.getElementById('chatHistoryWrap').style.display = 'block';
   var wrap = document.getElementById('chatHistoryMsgs');
@@ -2253,7 +2253,7 @@ async function openChatFromFirebase(phone, nombre){
 function openChatHistory(id, nombre, tel){ openChatFromFirebase(tel, nombre); return;
   // legacy below
 
-  currentChatPhone = tel;
+  currentChatPhone = tel.toString().replace(/[^0-9]/g,'');
   document.getElementById('chatHistoryTitle').textContent = '💬 ' + nombre;
   document.getElementById('chatHistoryWrap').style.display = 'block';
   var wrap = document.getElementById('chatHistoryMsgs');
