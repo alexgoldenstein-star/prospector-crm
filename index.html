@@ -3383,8 +3383,8 @@ function renderCola(){
       if(limitAlcanzado){
         html += '<div style="font-size:12px;color:var(--orange);padding:6px 10px;background:rgba(251,146,60,0.1);border-radius:6px;flex:1">⚠ Límite diario alcanzado ('+limite+' enviados)</div>';
       } else {
-        html += '<button class="btn btn-g" style="font-size:11px" onclick="generarMensajeCola('+p.id+', ''+p.nombre.replace(/'/g,'')+'', ''+p.rubro+'', ''+p.estado+'')">✦ Generar con IA</button>';
-        html += '<button class="btn btn-p" style="font-size:12px;flex:1;background:#25d366;border-color:#25d366;color:#000" onclick="enviarDesdeCola('+p.id+', ''+tel+'')" '+(tel?'':'disabled')+'>📲 Abrir en mi WhatsApp</button>';
+        html += '<button class="btn btn-g" style="font-size:11px" data-id="'+p.id+'" data-nombre="'+encodeURIComponent(p.nombre||'')+'" data-rubro="'+encodeURIComponent(p.rubro||'')+'" data-estado="'+encodeURIComponent(p.estado||'')+'" onclick="generarMensajeColaBtn(this)">✦ Generar con IA</button>';
+        html += '<button class="btn btn-p" style="font-size:12px;flex:1;background:#25d366;border-color:#25d366;color:#000" data-id="'+p.id+'" data-tel="'+tel+'" onclick="enviarDesdeColaBtn(this)" '+(tel?'':'disabled')+'>📲 Abrir en mi WhatsApp</button>';
       }
       html += '</div>';
     }
@@ -3445,6 +3445,20 @@ async function generarTodosLosMensajes(){
     await new Promise(function(res){ setTimeout(res, 300); });
   }
   toast('✅ Mensajes generados');
+}
+
+function generarMensajeColaBtn(btn){
+  var id = parseInt(btn.dataset.id);
+  var nombre = decodeURIComponent(btn.dataset.nombre||'');
+  var rubro = decodeURIComponent(btn.dataset.rubro||'comercio');
+  var estado = decodeURIComponent(btn.dataset.estado||'nuevo');
+  generarMensajeCola(id, nombre, rubro, estado);
+}
+
+function enviarDesdeColaBtn(btn){
+  var id = parseInt(btn.dataset.id);
+  var tel = btn.dataset.tel||'';
+  enviarDesdeCola(id, tel);
 }
 
 function enviarDesdeCola(id, tel){
