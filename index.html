@@ -251,6 +251,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
       <span class="nav-badge" id="bot-notif" style="display:none">!</span>
     </button>
     <button class="nav-item" onclick="showPanel('broadcast')"><span class="nav-ic">📡</span>Difusión Masiva</button>
+    <button class="nav-item" onclick="showPanel('cola')"><span class="nav-ic">📲</span>Cola Manual</button>
     <div class="nav-lbl">Análisis</div>
     <button class="nav-item" onclick="showPanel('reportes')"><span class="nav-ic">▦</span>Reportes</button>
     <div class="nav-lbl">Sistema</div>
@@ -865,6 +866,101 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
       <div id="bc-contacts-list" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);max-height:400px;overflow-y:auto"></div>
     </div>
 
+    <!-- ═══════════════════════════════════════ -->
+    <!-- PANEL: COLA MANUAL                      -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="panel" id="panel-cola">
+
+      <!-- Header stats -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px" id="cola-stats">
+        <div class="scraper-card" style="text-align:center;padding:14px">
+          <div style="font-size:24px;font-weight:700;color:var(--accent)" id="cola-total">0</div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px">En cola</div>
+        </div>
+        <div class="scraper-card" style="text-align:center;padding:14px">
+          <div style="font-size:24px;font-weight:700;color:var(--green)" id="cola-enviados-hoy">0</div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px">Enviados hoy</div>
+        </div>
+        <div class="scraper-card" style="text-align:center;padding:14px">
+          <div style="font-size:24px;font-weight:700;color:var(--orange)" id="cola-restantes">30</div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px">Restantes hoy</div>
+        </div>
+        <div class="scraper-card" style="text-align:center;padding:14px">
+          <div style="font-size:24px;font-weight:700;color:var(--text)" id="cola-respondieron">0</div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px">Respondieron</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:300px 1fr;gap:14px;align-items:start">
+
+        <!-- Configuración de cola -->
+        <div>
+          <div class="scraper-card" style="margin-bottom:14px">
+            <div class="sc-title">⚙ Configurar cola</div>
+
+            <div class="fg" style="margin-bottom:10px">
+              <label class="flbl">Límite diario</label>
+              <input class="fi" id="cola-limite" type="number" value="30" min="5" max="80">
+              <div style="font-size:11px;color:var(--text3);margin-top:3px">Recomendado: 20-30 para WA personal</div>
+            </div>
+
+            <div class="fg" style="margin-bottom:10px">
+              <label class="flbl">Filtrar por rubro</label>
+              <select class="fs" id="cola-rubro" onchange="filtrarCola()">
+                <option value="">Todos los rubros</option>
+              </select>
+            </div>
+
+            <div class="fg" style="margin-bottom:10px">
+              <label class="flbl">Prioridad</label>
+              <select class="fs" id="cola-prioridad" onchange="filtrarCola()">
+                <option value="rating">Mayor rating primero</option>
+                <option value="dias">Más días sin contacto</option>
+                <option value="nuevo">Solo nuevos (sin contactar)</option>
+              </select>
+            </div>
+
+            <div class="fg" style="margin-bottom:12px">
+              <label class="flbl">Tipo de mensaje</label>
+              <select class="fs" id="cola-tipo-msg">
+                <option value="presentacion">Presentación inicial</option>
+                <option value="seguimiento">Seguimiento</option>
+                <option value="promo">Promoción semanal</option>
+                <option value="catalogo">Catálogo disponible</option>
+              </select>
+            </div>
+
+            <button class="btn btn-p" style="width:100%;margin-bottom:8px" onclick="initColaManual()">🔄 Cargar cola</button>
+            <button class="btn btn-g" style="width:100%" onclick="resetColaHoy()">↺ Resetear contador hoy</button>
+          </div>
+
+          <div class="scraper-card">
+            <div class="sc-title">💡 Cómo funciona</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.8">
+              1. Configurá el rubro y prioridad<br>
+              2. La IA genera un mensaje para cada contacto<br>
+              3. Tocás <strong>Enviar</strong> → abre tu WA personal con el mensaje listo<br>
+              4. El contacto queda marcado como enviado<br>
+              5. El contador te avisa cuando llegás al límite del día
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista de cola -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:14px;font-weight:600">Contactos en cola</div>
+            <div style="display:flex;gap:8px">
+              <input class="srch" id="cola-search" placeholder="Buscar..." style="width:160px" oninput="filtrarCola()">
+              <button class="btn btn-g" onclick="generarTodosLosMensajes()" style="font-size:12px">✦ Generar todos los mensajes</button>
+            </div>
+          </div>
+          <div id="cola-list"></div>
+        </div>
+
+      </div>
+    </div>
+
   </div><!-- /content -->
 </main>
 </div>
@@ -1102,11 +1198,12 @@ function showPanel(n){
   if(n==='reportes')renderReports();
   if(n==='bot'){populateSimSelect();renderActiveConvs();loadChatHistory();}
   if(n==='broadcast'){loadBroadcastContacts();populateBCRubros();}
+  if(n==='cola'){initColaManual();}
   if(n==='scraper')populateScraperRubros();
 }
 function setNav(n){
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
-  const map={dashboard:0,prospectos:1,pipeline:2,scraper:3,importar:4,emails:5,mensajes:6,training:7,bot:8,broadcast:9,reportes:10,config:11,setup:12};
+  const map={dashboard:0,prospectos:1,pipeline:2,scraper:3,importar:4,emails:5,mensajes:6,training:7,bot:8,broadcast:9,cola:10,reportes:11,config:12,setup:13};
   const items=document.querySelectorAll('.nav-item');
   if(items[map[n]])items[map[n]].classList.add('active');
 }
@@ -3153,6 +3250,282 @@ function toast(msg){
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),3200);
 }
+
+// ═══════════════════════════════════════════════
+// COLA MANUAL DE ENVÍOS
+// ═══════════════════════════════════════════════
+
+var colaData = [];          // contactos en cola
+var colaMensajes = {};      // mensajes generados por IA { id: texto }
+var colaEnviadosHoy = [];   // ids enviados hoy
+var COLA_STORAGE_KEY = 'crm_cola_hoy';
+
+function getColaHoy(){
+  try {
+    var d = JSON.parse(localStorage.getItem(COLA_STORAGE_KEY)||'{}');
+    // Resetear si es otro día
+    if(d.fecha !== new Date().toDateString()) return { fecha: new Date().toDateString(), enviados: [], respondieron: 0 };
+    return d;
+  } catch(e){ return { fecha: new Date().toDateString(), enviados: [], respondieron: 0 }; }
+}
+
+function saveColaHoy(data){ localStorage.setItem(COLA_STORAGE_KEY, JSON.stringify(data)); }
+
+function initColaManual(){
+  // Poblar select de rubros
+  var rubros = [...new Set(getP().map(function(p){ return p.rubro; }).filter(Boolean))].sort();
+  var sel = document.getElementById('cola-rubro');
+  if(sel){
+    sel.innerHTML = '<option value="">Todos los rubros</option>';
+    rubros.forEach(function(r){ sel.innerHTML += '<option value="'+r+'">'+r+'</option>'; });
+  }
+
+  filtrarCola();
+  actualizarStatsColaHoy();
+}
+
+function filtrarCola(){
+  var ps = getP();
+  var rubro = document.getElementById('cola-rubro')?.value || '';
+  var prioridad = document.getElementById('cola-prioridad')?.value || 'rating';
+  var search = (document.getElementById('cola-search')?.value||'').toLowerCase();
+  var hoy = getColaHoy();
+
+  // Filtrar: tienen teléfono, no enviados hoy
+  var lista = ps.filter(function(p){
+    var tel = p.WhatsApp || p.tel || '';
+    if(!tel || tel.length < 7) return false;
+    if(hoy.enviados.includes(p.id)) return false;
+    if(rubro && p.rubro !== rubro) return false;
+    if(prioridad === 'nuevo' && p.estado !== 'nuevo') return false;
+    if(search && !(p.nombre||'').toLowerCase().includes(search) && !(p.rubro||'').toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  // Ordenar
+  if(prioridad === 'rating'){
+    lista.sort(function(a,b){ return (b.rating||0)-(a.rating||0); });
+  } else if(prioridad === 'dias'){
+    lista.sort(function(a,b){
+      var da = a.lastContact ? Date.now()-new Date(a.lastContact).getTime() : 999999999;
+      var db = b.lastContact ? Date.now()-new Date(b.lastContact).getTime() : 999999999;
+      return db-da;
+    });
+  }
+
+  var limite = parseInt(document.getElementById('cola-limite')?.value||30);
+  colaData = lista.slice(0, Math.min(lista.length, limite * 3)); // mostrar hasta 3x el límite
+
+  document.getElementById('cola-total').textContent = colaData.length;
+  renderCola();
+}
+
+function actualizarStatsColaHoy(){
+  var hoy = getColaHoy();
+  var limite = parseInt(document.getElementById('cola-limite')?.value||30);
+  var enviados = hoy.enviados.length;
+  var restantes = Math.max(0, limite - enviados);
+  document.getElementById('cola-enviados-hoy').textContent = enviados;
+  document.getElementById('cola-restantes').textContent = restantes;
+  document.getElementById('cola-respondieron').textContent = hoy.respondieron||0;
+}
+
+function renderCola(){
+  var el = document.getElementById('cola-list');
+  if(!el) return;
+  var hoy = getColaHoy();
+  var limite = parseInt(document.getElementById('cola-limite')?.value||30);
+
+  if(!colaData.length){
+    el.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text3);font-size:13px">No hay contactos en cola con los filtros actuales.</div>';
+    return;
+  }
+
+  var html = '';
+  colaData.forEach(function(p, i){
+    var tel = (p.WhatsApp || p.tel || '').toString().replace(/[^0-9]/g,'');
+    var enviado = hoy.enviados.includes(p.id);
+    var mensaje = colaMensajes[p.id] || '';
+    var diasSinContacto = p.lastContact ? Math.floor((Date.now()-new Date(p.lastContact).getTime())/(1000*60*60*24)) : null;
+    var rating = p.rating||0;
+    var stars = '★'.repeat(rating)+'☆'.repeat(5-rating);
+    var limitAlcanzado = hoy.enviados.length >= limite;
+
+    html += '<div id="cola-item-'+p.id+'" style="background:var(--bg2);border:1px solid '+(enviado?'var(--green)':'var(--border)')+';border-radius:10px;padding:14px;margin-bottom:10px;transition:all .2s">';
+
+    // Header del contacto
+    html += '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px">';
+    html += '<div style="width:36px;height:36px;border-radius:8px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+(enviado?'✅':'🏢')+'</div>';
+    html += '<div style="flex:1">';
+    html += '<div style="font-weight:600;font-size:13px">'+p.nombre+'</div>';
+    html += '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+
+      (p.rubro||'sin rubro')+
+      (p.zona?' · '+p.zona:'')+
+      ' · <span style="color:var(--accent)">'+stars+'</span>'+
+      (diasSinContacto!==null?' · '+diasSinContacto+'d sin contacto':' · sin contacto previo')+
+    '</div>';
+    html += '</div>';
+    if(enviado){
+      html += '<span style="font-size:11px;color:var(--green);font-family:var(--fm);background:rgba(74,222,128,0.1);padding:3px 8px;border-radius:20px">Enviado hoy</span>';
+    }
+    html += '</div>';
+
+    // Área de mensaje
+    if(enviado){
+      html += '<div style="font-size:12px;color:var(--text3);padding:8px;background:var(--bg3);border-radius:6px;margin-bottom:8px">'+
+        (mensaje||'Mensaje enviado')+'</div>';
+      html += '<button class="btn btn-g" style="font-size:11px;margin-right:8px" onclick="marcarRespondio('+p.id+')">📩 Respondió</button>';
+      html += '<button class="btn btn-g" style="font-size:11px" onclick="desmarcarEnviado('+p.id+')">↺ Desmarcar</button>';
+    } else {
+      // Área editable del mensaje
+      html += '<textarea id="msg-cola-'+p.id+'" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;color:var(--text);resize:vertical;min-height:60px;font-family:inherit;box-sizing:border-box;margin-bottom:8px" placeholder="Generá el mensaje con IA o escribí uno...">'+(mensaje)+'</textarea>';
+      html += '<div style="display:flex;gap:8px">';
+      if(limitAlcanzado){
+        html += '<div style="font-size:12px;color:var(--orange);padding:6px 10px;background:rgba(251,146,60,0.1);border-radius:6px;flex:1">⚠ Límite diario alcanzado ('+limite+' enviados)</div>';
+      } else {
+        html += '<button class="btn btn-g" style="font-size:11px" onclick="generarMensajeCola('+p.id+', ''+p.nombre.replace(/'/g,'')+'', ''+p.rubro+'', ''+p.estado+'')">✦ Generar con IA</button>';
+        html += '<button class="btn btn-p" style="font-size:12px;flex:1;background:#25d366;border-color:#25d366;color:#000" onclick="enviarDesdeCola('+p.id+', ''+tel+'')" '+(tel?'':'disabled')+'>📲 Abrir en mi WhatsApp</button>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+
+  el.innerHTML = html;
+}
+
+async function generarMensajeCola(id, nombre, rubro, estado){
+  var tipoMsg = document.getElementById('cola-tipo-msg')?.value || 'presentacion';
+  var tipos = {
+    presentacion: 'primer contacto, presentación de NIVIKO',
+    seguimiento: 'seguimiento de contacto previo',
+    promo: 'comunicar promoción de la semana',
+    catalogo: 'ofrecer catálogo actualizado'
+  };
+  var ta = document.getElementById('msg-cola-'+id);
+  if(ta) ta.value = '✦ Generando...';
+
+  var co = ST.co === 'broker' ? 'Broker Materiales' : 'NIVIKO';
+  var coDesc = ST.co === 'broker' ? 'distribuidora de materiales de construcción' : 'distribuidora mayorista de muebles, tecnología y artículos del hogar';
+
+  try {
+    var r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': ST.cfg['cfg-claude']||'', 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 150,
+        messages: [{
+          role: 'user',
+          content: 'Escribí un mensaje de WhatsApp para un vendedor de '+co+' ('+coDesc+'). Destinatario: negocio de '+rubro+' llamado '+nombre+'. Objetivo: '+tipos[tipoMsg]+'. Máximo 3 oraciones. Sin markdown, sin asteriscos. Tono: directo, humano, sin "estimado cliente". Terminá con una pregunta corta para generar respuesta. Solo el mensaje, sin aclaraciones.'
+        }]
+      })
+    });
+    var data = await r.json();
+    var msg = data.content?.[0]?.text || '';
+    if(msg){
+      colaMensajes[id] = msg;
+      if(ta) ta.value = msg;
+    } else {
+      if(ta) ta.value = 'Error al generar. Escribí el mensaje manualmente.';
+    }
+  } catch(e){
+    if(ta) ta.value = 'Sin conexión a IA. Escribí el mensaje manualmente.';
+  }
+}
+
+async function generarTodosLosMensajes(){
+  toast('✦ Generando mensajes... puede tardar unos segundos');
+  for(var i=0; i<Math.min(colaData.length,15); i++){
+    var p = colaData[i];
+    var hoy = getColaHoy();
+    if(hoy.enviados.includes(p.id)) continue;
+    if(colaMensajes[p.id]) continue;
+    await generarMensajeCola(p.id, p.nombre, p.rubro||'comercio', p.estado||'nuevo');
+    await new Promise(function(res){ setTimeout(res, 300); });
+  }
+  toast('✅ Mensajes generados');
+}
+
+function enviarDesdeCola(id, tel){
+  var hoy = getColaHoy();
+  var limite = parseInt(document.getElementById('cola-limite')?.value||30);
+  if(hoy.enviados.length >= limite){
+    toast('⚠ Límite diario de '+limite+' contactos alcanzado. Volvé mañana o subí el límite.');
+    return;
+  }
+  if(!tel){ toast('Sin número para este contacto'); return; }
+
+  // Leer mensaje del textarea (puede estar editado por el usuario)
+  var ta = document.getElementById('msg-cola-'+id);
+  var msg = ta ? ta.value.trim() : (colaMensajes[id]||'');
+
+  if(!msg){
+    toast('⚠ Generá o escribí un mensaje primero');
+    return;
+  }
+
+  // Abrir WA con mensaje pre-cargado
+  var url = 'https://wa.me/'+tel+'?text='+encodeURIComponent(msg);
+  window.open(url, '_blank');
+
+  // Marcar como enviado
+  hoy.enviados.push(id);
+  saveColaHoy(hoy);
+
+  // Actualizar estado del prospecto
+  var ps = getP();
+  var idx = ps.findIndex(function(p){ return p.id === id; });
+  if(idx !== -1){
+    ps[idx].estado = ps[idx].estado === 'nuevo' ? 'contactado' : ps[idx].estado;
+    ps[idx].lastContact = new Date().toISOString();
+    ps[idx].msgs = (ps[idx].msgs||0)+1;
+    ps[idx].canal = 'whatsapp_manual';
+    saveP_data(ps);
+  }
+
+  actualizarStatsColaHoy();
+  // Re-render solo ese item
+  var item = document.getElementById('cola-item-'+id);
+  if(item){
+    // Marcar visualmente sin recargar todo
+    colaData = colaData; // mantener
+    filtrarCola();
+  }
+  toast('✅ WhatsApp abierto. Revisá el mensaje y enviá desde tu teléfono.');
+}
+
+function marcarRespondio(id){
+  var hoy = getColaHoy();
+  hoy.respondieron = (hoy.respondieron||0)+1;
+  saveColaHoy(hoy);
+
+  // Actualizar estado
+  var ps = getP();
+  var idx = ps.findIndex(function(p){ return p.id === id; });
+  if(idx !== -1){ ps[idx].estado = 'interesado'; saveP_data(ps); }
+
+  actualizarStatsColaHoy();
+  filtrarCola();
+  toast('✅ Marcado como respondió → estado: Interesado');
+}
+
+function desmarcarEnviado(id){
+  var hoy = getColaHoy();
+  hoy.enviados = hoy.enviados.filter(function(x){ return x !== id; });
+  saveColaHoy(hoy);
+  actualizarStatsColaHoy();
+  filtrarCola();
+}
+
+function resetColaHoy(){
+  if(!confirm('¿Resetear el contador de hoy? Los enviados quedan guardados en el historial de prospectos.')) return;
+  saveColaHoy({ fecha: new Date().toDateString(), enviados: [], respondieron: 0 });
+  actualizarStatsColaHoy();
+  filtrarCola();
+  toast('↺ Contador reseteado');
+}
+
 </script>
 </body>
 </html>
