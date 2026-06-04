@@ -3353,11 +3353,17 @@ function renderCola(){
 
     html += '<div id="cola-item-'+p.id+'" style="background:var(--bg2);border:1px solid '+(enviado?'var(--green)':'var(--border)')+';border-radius:10px;padding:14px;margin-bottom:10px;transition:all .2s">';
 
+    // Maps link
+    var mapsQ = encodeURIComponent((p.nombre||'')+(p.zona?' '+p.zona:''));
+    var mapsUrl = 'https://www.google.com/maps/search/?api=1&query='+mapsQ;
+
     // Header del contacto
-    html += '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px">';
+    html += '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:8px">';
     html += '<div style="width:36px;height:36px;border-radius:8px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+(enviado?'✅':'🏢')+'</div>';
     html += '<div style="flex:1">';
-    html += '<div style="font-weight:600;font-size:13px">'+p.nombre+'</div>';
+    html += '<div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px">'+p.nombre+
+      '<a href="'+mapsUrl+'" target="_blank" style="font-size:10px;color:var(--text3);text-decoration:none;background:var(--bg4);padding:2px 7px;border-radius:10px;border:1px solid var(--border);flex-shrink:0" title="Ver en Google Maps">📍 Maps</a>'+
+    '</div>';
     html += '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+
       (p.rubro||'sin rubro')+
       (p.zona?' · '+p.zona:'')+
@@ -3365,26 +3371,39 @@ function renderCola(){
       (diasSinContacto!==null?' · '+diasSinContacto+'d sin contacto':' · sin contacto previo')+
     '</div>';
     html += '</div>';
+    // Botón no interesa (siempre visible)
+    html += '<button title="No interesa" data-id="'+p.id+'" onclick="noInteresaCola(this)" style="background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;flex-shrink:0">✕ No interesa</button>';
     if(enviado){
-      html += '<span style="font-size:11px;color:var(--green);font-family:var(--fm);background:rgba(74,222,128,0.1);padding:3px 8px;border-radius:20px">Enviado hoy</span>';
+      html += '<span style="font-size:11px;color:var(--green);font-family:var(--fm);background:rgba(74,222,128,0.1);padding:3px 8px;border-radius:20px;margin-left:4px">Enviado</span>';
     }
     html += '</div>';
 
     // Área de mensaje
     if(enviado){
       html += '<div style="font-size:12px;color:var(--text3);padding:8px;background:var(--bg3);border-radius:6px;margin-bottom:8px">'+
-        (mensaje||'Mensaje enviado')+'</div>';
+        (colaMensajes[p.id]||'Mensaje enviado')+'</div>';
       html += '<button class="btn btn-g" style="font-size:11px;margin-right:8px" onclick="marcarRespondio('+p.id+')">📩 Respondió</button>';
       html += '<button class="btn btn-g" style="font-size:11px" onclick="desmarcarEnviado('+p.id+')">↺ Desmarcar</button>';
     } else {
-      // Área editable del mensaje
-      html += '<textarea id="msg-cola-'+p.id+'" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;color:var(--text);resize:vertical;min-height:60px;font-family:inherit;box-sizing:border-box;margin-bottom:8px" placeholder="Generá el mensaje con IA o escribí uno...">'+(mensaje)+'</textarea>';
+      // Selector de plantilla
+      html += '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">';
+      html += '<select id="tpl-sel-'+p.id+'" class="fs" style="font-size:11px;padding:4px 8px;flex:1" onchange="aplicarPlantilla('+p.id+')">';
+      html += '<option value="">— Elegir plantilla —</option>';
+      html += '<option value="presentacion">👋 Presentación inicial</option>';
+      html += '<option value="catalogo">📋 Catálogo disponible</option>';
+      html += '<option value="promo">🔥 Promoción semanal</option>';
+      html += '<option value="seguimiento">📞 Seguimiento (no respondió)</option>';
+      html += '<option value="reactivacion">↩ Reactivación (hace tiempo)</option>';
+      html += '</select>';
+      html += '</div>';
+      // Textarea editable
+      html += '<textarea id="msg-cola-'+p.id+'" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;color:var(--text);resize:vertical;min-height:64px;font-family:inherit;box-sizing:border-box;margin-bottom:8px" placeholder="Elegí una plantilla arriba o escribí el mensaje...">'+(mensaje)+'</textarea>';
       html += '<div style="display:flex;gap:8px">';
       if(limitAlcanzado){
-        html += '<div style="font-size:12px;color:var(--orange);padding:6px 10px;background:rgba(251,146,60,0.1);border-radius:6px;flex:1">⚠ Límite diario alcanzado ('+limite+' enviados)</div>';
+        html += '<div style="font-size:12px;color:var(--orange);padding:6px 10px;background:rgba(251,146,60,0.1);border-radius:6px;flex:1">⚠ Límite diario alcanzado ('+limite+')</div>';
       } else {
-        html += '<button class="btn btn-g" style="font-size:11px" data-id="'+p.id+'" data-nombre="'+encodeURIComponent(p.nombre||'')+'" data-rubro="'+encodeURIComponent(p.rubro||'')+'" data-estado="'+encodeURIComponent(p.estado||'')+'" onclick="generarMensajeColaBtn(this)">✦ Generar con IA</button>';
-        html += '<button class="btn btn-p" style="font-size:12px;flex:1;background:#25d366;border-color:#25d366;color:#000" data-id="'+p.id+'" data-tel="'+tel+'" onclick="enviarDesdeColaBtn(this)" '+(tel?'':'disabled')+'>📲 Abrir en mi WhatsApp</button>';
+        html += '<button class="btn btn-g" style="font-size:11px" data-id="'+p.id+'" data-nombre="'+encodeURIComponent(p.nombre||'')+'" data-rubro="'+encodeURIComponent(p.rubro||'')+'" data-estado="'+encodeURIComponent(p.estado||'')+'" onclick="generarMensajeColaBtn(this)">✦ IA</button>';
+        html += '<button class="btn btn-p" style="font-size:12px;flex:1;background:#25d366;border-color:#25d366;color:#000;font-weight:600" data-id="'+p.id+'" data-tel="'+tel+'" onclick="enviarDesdeColaBtn(this)" '+(tel?'':'disabled title="Sin número"')+'>📲 Enviar desde mi WA</button>';
       }
       html += '</div>';
     }
@@ -3408,10 +3427,20 @@ async function generarMensajeCola(id, nombre, rubro, estado){
   var co = ST.co === 'broker' ? 'Broker Materiales' : 'NIVIKO';
   var coDesc = ST.co === 'broker' ? 'distribuidora de materiales de construcción' : 'distribuidora mayorista de muebles, tecnología y artículos del hogar';
 
+  var apiKey = ST.cfg['cfg-claude'];
+  if(!apiKey){
+    if(ta) ta.value = '⚠ Sin API Key de Claude. Configurala en Configuración → Claude API, o usá una plantilla del selector de arriba.';
+    return;
+  }
   try {
     var r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': ST.cfg['cfg-claude']||'', 'anthropic-version': '2023-06-01' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 150,
@@ -3422,15 +3451,15 @@ async function generarMensajeCola(id, nombre, rubro, estado){
       })
     });
     var data = await r.json();
-    var msg = data.content?.[0]?.text || '';
+    var msg = (data.content&&data.content[0]&&data.content[0].text) ? data.content[0].text : '';
     if(msg){
       colaMensajes[id] = msg;
       if(ta) ta.value = msg;
     } else {
-      if(ta) ta.value = 'Error al generar. Escribí el mensaje manualmente.';
+      if(ta) ta.value = '⚠ Sin respuesta de IA. Usá una plantilla del selector o escribí el mensaje.';
     }
   } catch(e){
-    if(ta) ta.value = 'Sin conexión a IA. Escribí el mensaje manualmente.';
+    if(ta) ta.value = '⚠ Error de conexión. Usá las plantillas del selector arriba.';
   }
 }
 
@@ -3445,6 +3474,54 @@ async function generarTodosLosMensajes(){
     await new Promise(function(res){ setTimeout(res, 300); });
   }
   toast('✅ Mensajes generados');
+}
+
+function noInteresaCola(btn){
+  var id = parseInt(btn.dataset.id);
+  var ps = getP();
+  var idx = ps.findIndex(function(p){ return p.id === id; });
+  if(idx === -1) return;
+  if(!confirm('¿Marcar "'+ps[idx].nombre+'" como No interesa? Se ocultará de la cola.')) return;
+  ps[idx].estado = 'no_interesa';
+  ps[idx].oculto = true;
+  saveP_data(ps);
+  // Sacar de colaData y re-render
+  colaData = colaData.filter(function(p){ return p.id !== id; });
+  document.getElementById('cola-total').textContent = colaData.length;
+  var item = document.getElementById('cola-item-'+id);
+  if(item){ item.style.opacity='0'; item.style.height='0'; item.style.overflow='hidden'; setTimeout(function(){ item.remove(); },300); }
+  toast('✕ Contacto marcado como No interesa');
+}
+
+function aplicarPlantilla(id){
+  var sel = document.getElementById('tpl-sel-'+id);
+  var ta = document.getElementById('msg-cola-'+id);
+  if(!sel||!ta) return;
+  var tpl = sel.value;
+  if(!tpl) return;
+
+  // Buscar el contacto para personalizar
+  var p = colaData.find(function(x){ return x.id === id; });
+  var nombre = p ? (p.contacto || p.nombre || 'te') : 'te';
+  var rubro = p ? (p.rubro||'artículos del hogar') : 'artículos del hogar';
+  var co = ST.co === 'broker' ? 'Broker Materiales' : 'NIVIKO';
+
+  var plantillas = {
+    presentacion:
+      'Hola '+nombre+', te escribo de '+co+', distribuidora mayorista de muebles, tecnología y artículos del hogar. ¿Trabajás con alguno de esos rubros? Puedo mandarte nuestra lista de precios actualizada 👋',
+    catalogo:
+      'Hola '+nombre+'! Soy de '+co+'. Renovamos el catálogo con productos nuevos y mejores precios en '+rubro+'. ¿Te lo mando?',
+    promo:
+      'Hola '+nombre+', te escribo de '+co+'. Esta semana tenemos precios especiales en '+rubro+'. Si te interesa te paso los números, son muy competitivos 🔥',
+    seguimiento:
+      'Hola '+nombre+', hace unos días te contacté de '+co+'. ¿Pudiste ver la info? Cualquier duda estoy disponible 😊',
+    reactivacion:
+      'Hola '+nombre+'! Hace un tiempo habíamos hablado de '+co+'. Hoy tenemos stock renovado y mejores condiciones. ¿Querés que te mande lo que hay disponible?'
+  };
+
+  var msg = plantillas[tpl] || '';
+  ta.value = msg;
+  colaMensajes[id] = msg;
 }
 
 function generarMensajeColaBtn(btn){
