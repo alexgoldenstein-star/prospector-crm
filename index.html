@@ -218,6 +218,27 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
 </style>
 </head>
 <body>
+<!-- PANTALLA LOGIN VENDEDOR -->
+<div id="vendedor-login" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;align-items:center;justify-content:center">
+  <div style="text-align:center;max-width:360px;width:90%;padding:40px 32px;background:var(--bg2);border:1px solid var(--border);border-radius:20px">
+    <div style="font-size:36px;margin-bottom:16px">📲</div>
+    <div style="font-size:22px;font-weight:700;margin-bottom:6px">Prospector CRM</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:32px">¿Quién sos?</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <button onclick="elegirVendedor('v1')" style="padding:18px;border-radius:12px;border:2px solid var(--accent);background:rgba(255,200,0,0.08);color:var(--text);font-size:15px;font-weight:600;cursor:pointer">
+        👤 Vendedor 1
+      </button>
+      <button onclick="elegirVendedor('v2')" style="padding:18px;border-radius:12px;border:2px solid var(--orange);background:rgba(251,146,60,0.08);color:var(--text);font-size:15px;font-weight:600;cursor:pointer">
+        👤 Vendedor 2
+      </button>
+      <button onclick="elegirVendedor('admin')" style="padding:12px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--text3);font-size:13px;cursor:pointer">
+        🔧 Admin (ver todo)
+      </button>
+    </div>
+    <div style="margin-top:20px;font-size:11px;color:var(--text3)">Tu selección se guarda en este dispositivo</div>
+  </div>
+</div>
+
 <div class="app">
 
 <!-- SIDEBAR -->
@@ -1074,15 +1095,31 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
         </div>
       </div>
       <div>
-        <div style="font-size:10px;font-family:var(--fm);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Historial</div>
-        <div id="ep-conv-history" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:120px;max-height:180px;overflow-y:auto;font-size:12px;line-height:1.7;margin-bottom:14px"></div>
+        <div style="font-size:10px;font-family:var(--fm);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Historial de actividad</div>
+        <!-- Agregar entrada -->
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <select id="ep-hist-tipo" class="fs" style="font-size:11px;padding:4px 8px;width:140px;flex-shrink:0">
+            <option value="llamada">📞 Llamada</option>
+            <option value="whatsapp">💬 WhatsApp</option>
+            <option value="email">✉ Email</option>
+            <option value="reunion">🤝 Reunión</option>
+            <option value="pedido">📦 Pedido</option>
+            <option value="nota">📝 Nota</option>
+            <option value="no_atiende">🚫 No atiende</option>
+          </select>
+          <input id="ep-hist-texto" class="fi" placeholder="¿Qué pasó?" style="font-size:11px;flex:1">
+          <button class="btn btn-p" style="font-size:11px;padding:6px 10px;flex-shrink:0" onclick="agregarHistorial()">+ Agregar</button>
+        </div>
+        <!-- Timeline -->
+        <div id="ep-conv-history" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;min-height:100px;max-height:200px;overflow-y:auto;font-size:12px;line-height:1.7;margin-bottom:14px"></div>
         <div style="font-size:10px;font-family:var(--fm);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Acciones rápidas</div>
         <div style="display:flex;flex-direction:column;gap:7px">
           <button class="btn btn-g" style="justify-content:flex-start" onclick="closeM('editP');showPanel('mensajes');setNav('mensajes')">✦ Generar mensaje IA</button>
           <button class="btn btn-g" style="justify-content:flex-start" onclick="closeM('editP');openBotSim(parseInt(document.getElementById('ep-id').value))">🤖 Simular bot</button>
-          <button class="btn btn-g" style="justify-content:flex-start" onclick="enrichProspect(parseInt(document.getElementById('ep-id').value))">🔍 Enriquecer con Maps/Web</button>
+          <button class="btn btn-g" style="justify-content:flex-start" onclick="enrichProspect(parseInt(document.getElementById('ep-id').value))">🔍 Buscar en Google Maps</button>
           <button class="btn btn-g" style="justify-content:flex-start" onclick="openWA(document.getElementById('ep-tel').value)" id="ep-open-wa">💬 Abrir WhatsApp (bot)</button>
           <button class="btn btn-g" style="justify-content:flex-start;background:rgba(37,211,102,0.12);border-color:#25d366;color:#25d366" onclick="openWAVendedor(document.getElementById('ep-tel').value, document.getElementById('ep-nombre').value)">📲 Seguimiento personal (mi WA)</button>
+          <button class="btn btn-g" style="justify-content:flex-start" onclick="guardarContactoTel()">📱 Guardar en mi teléfono</button>
         </div>
       </div>
     </div>
@@ -1325,6 +1362,8 @@ function showProspect(id){
   igLink.onclick=()=>openIG(p.ig);
   // Conversation history
   const convs=ST.convHistory[id]||[];
+  // Cargar historial de actividad
+  cargarHistorial(p.id);
   const convEl=document.getElementById('ep-conv-history');
   convEl.innerHTML=convs.length
     ? convs.map(m=>`<div style="margin-bottom:6px;font-size:12px"><span style="color:${m.role==='bot'?'var(--accent)':'var(--text2)'}">${m.role==='bot'?'Bot':'Cliente'}:</span> ${m.txt}</div>`).join('')
@@ -2674,35 +2713,44 @@ async function enrichAllScraper(){
 // Bulk enrich all CRM prospects without contact data
 async function enrichAllProspects(){
   var mapsKey = ST.cfg['cfg-maps'];
-  if(!mapsKey){toast('⚠ Configurá tu Google Maps API Key');return;}
+  if(!mapsKey){toast('⚠ Configurá tu Google Maps API Key en Configuración');return;}
   var ps = getP();
-  var toEnrich = ps.filter(function(p){return !p.tel&&!p.WhatsApp&&!p.email;});
+  // Enriquecer cualquier prospecto sin datos completos (no solo scraper)
+  var toEnrich = ps.filter(function(p){
+    return (!p.tel&&!p.WhatsApp&&!p.email) || (!p.direccion&&(p.tel||p.email));
+  });
   if(!toEnrich.length){toast('✅ Todos los prospectos ya tienen datos');return;}
-  if(!confirm('¿Enriquecer '+toEnrich.length+' prospectos sin datos de contacto? Puede tardar varios minutos.')) return;
-  toast('🔍 Enriqueciendo '+toEnrich.length+' prospectos...');
-  var done=0;
+  if(!confirm('¿Buscar en Google Maps para '+toEnrich.length+' prospectos sin datos completos? Puede tardar varios minutos.')) return;
+  toast('🔍 Buscando '+toEnrich.length+' prospectos en Google Maps...');
+  var done=0; var found=0;
   for(var i=0;i<ps.length;i++){
     var p = ps[i];
-    if(p.tel||p.WhatsApp||p.email) continue;
+    var needsEnrich = (!p.tel&&!p.WhatsApp&&!p.email) || (!p.direccion&&(p.tel||p.email));
+    if(!needsEnrich) continue;
     try{
-      var url='/api/maps?query='+encodeURIComponent(p.nombre+(p.zona?' '+p.zona:''))+'&key='+mapsKey;
+      // Buscar por nombre + ciudad/zona (funciona para cualquier prospecto)
+      var searchQuery = p.nombre + (p.ciudad?' '+p.ciudad:p.zona?' '+p.zona:'');
+      var url='/api/maps?query='+encodeURIComponent(searchQuery)+'&key='+mapsKey;
       var r = await fetch(url);
       var data = await r.json();
       if(data.results&&data.results.length>0){
         var best=data.results[0];
-        if(best.tel) ps[i].tel=best.tel;
-        if(best.whatsapp) ps[i].WhatsApp=best.whatsapp;
-        if(best.email) ps[i].email=best.email;
-        if(best.instagram) ps[i].ig=best.instagram;
-        if(best.website) ps[i].website=best.website;
+        var changed = false;
+        if(best.tel&&!ps[i].tel){ ps[i].tel=best.tel; changed=true; }
+        if(best.whatsapp&&!ps[i].WhatsApp){ ps[i].WhatsApp=best.whatsapp; changed=true; }
+        if(best.email&&!ps[i].email){ ps[i].email=best.email; changed=true; }
+        if(best.instagram&&!ps[i].ig){ ps[i].ig=best.instagram; changed=true; }
+        if(best.website&&!ps[i].website){ ps[i].website=best.website; changed=true; }
+        if(best.address&&!ps[i].direccion){ ps[i].direccion=best.address; changed=true; }
+        if(changed) found++;
       }
       done++;
-      if(done%10===0){toast('🔍 '+done+'/'+toEnrich.length+' procesados...');saveP_data(ps);}
-      await new Promise(function(resolve){setTimeout(resolve,300);});
+      if(done%10===0){toast('🔍 '+done+'/'+toEnrich.length+' procesados ('+found+' con datos nuevos)...');saveP_data(ps);}
+      await new Promise(function(resolve){setTimeout(resolve,400);});
     }catch(e){console.error(e);}
   }
   saveP_data(ps);renderAll();
-  toast('✅ Enriquecimiento completo: '+done+' prospectos actualizados');
+  toast('✅ Búsqueda completa: '+found+' prospectos enriquecidos de '+done+' consultados');
 }
 // ═══════════════════════════════════════════════
 // BOT SIMULATOR
@@ -3261,6 +3309,138 @@ function openWAVendedor(tel, nombre){
   var msg = 'Hola '+nombre+', te escribo de '+co+'. ¿Cómo te puedo ayudar?';
   window.open('https://wa.me/'+clean+'?text='+encodeURIComponent(msg),'_blank');
 }
+// ═══════════════════════════════════════════════
+// LOGIN VENDEDOR
+// ═══════════════════════════════════════════════
+function initVendedorLogin(){
+  var saved = localStorage.getItem('crm_vendedor');
+  if(saved){
+    ST.vendedor = saved;
+    // Actualizar selector en cola si existe
+    var sel = document.getElementById('cola-vendedor');
+    if(sel) sel.value = saved;
+    return; // no mostrar login
+  }
+  // Mostrar pantalla de login
+  var loginEl = document.getElementById('vendedor-login');
+  if(loginEl) loginEl.style.display = 'flex';
+}
+
+function elegirVendedor(v){
+  ST.vendedor = v;
+  localStorage.setItem('crm_vendedor', v);
+  var loginEl = document.getElementById('vendedor-login');
+  if(loginEl) loginEl.style.display = 'none';
+  // Sincronizar selector en cola
+  var sel = document.getElementById('cola-vendedor');
+  if(sel) sel.value = v;
+  toast('✅ Bienvenido, '+(v==='v1'?'Vendedor 1':v==='v2'?'Vendedor 2':'Admin'));
+}
+
+// Llamar al init en DOMContentLoaded (agregar al final del init existente)
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(initVendedorLogin, 500);
+});
+
+// ═══════════════════════════════════════════════
+// HISTORIAL DE ACTIVIDAD POR CONTACTO
+// ═══════════════════════════════════════════════
+var currentHistId = null; // id del prospecto abierto en modal
+
+function cargarHistorial(id){
+  currentHistId = id;
+  var el = document.getElementById('ep-conv-history');
+  if(!el) return;
+
+  var ps = getP();
+  var p = ps.find(function(x){ return x.id === id; });
+  if(!p){ el.innerHTML = '<span style="color:var(--text3)">Sin actividad registrada aún.</span>'; return; }
+
+  var hist = p.historial || [];
+  if(!hist.length){
+    el.innerHTML = '<span style="color:var(--text3);font-size:12px">Sin actividad registrada aún. Agregá la primera entrada arriba.</span>';
+    return;
+  }
+
+  var iconos = { llamada:'📞', whatsapp:'💬', email:'✉', reunion:'🤝', pedido:'📦', nota:'📝', no_atiende:'🚫' };
+  var html = hist.slice().reverse().map(function(h){
+    var fecha = new Date(h.fecha);
+    var fechaStr = fecha.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'}) + ' ' +
+                   fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+    return '<div style="padding:6px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start">'+
+      '<span style="flex-shrink:0">'+(iconos[h.tipo]||'📝')+'</span>'+
+      '<div style="flex:1">'+
+        '<span style="color:var(--text2)">'+h.texto+'</span>'+
+        '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+fechaStr+
+          (h.vendedor?' · '+(h.vendedor==='v1'?'Vendedor 1':h.vendedor==='v2'?'Vendedor 2':'Admin'):'')+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  el.innerHTML = html;
+}
+
+function agregarHistorial(){
+  var tipo = document.getElementById('ep-hist-tipo')?.value || 'nota';
+  var texto = document.getElementById('ep-hist-texto')?.value.trim() || '';
+  if(!texto){ toast('Escribí qué pasó'); return; }
+  if(!currentHistId){ toast('Abrí un contacto primero'); return; }
+
+  var ps = getP();
+  var idx = ps.findIndex(function(p){ return p.id === currentHistId; });
+  if(idx === -1) return;
+
+  if(!ps[idx].historial) ps[idx].historial = [];
+  ps[idx].historial.push({
+    tipo: tipo,
+    texto: texto,
+    fecha: new Date().toISOString(),
+    vendedor: ST.vendedor || 'v1'
+  });
+  ps[idx].lastContact = new Date().toISOString();
+
+  saveP_data(ps);
+  document.getElementById('ep-hist-texto').value = '';
+  cargarHistorial(currentHistId);
+  toast('✅ Actividad registrada');
+}
+
+// ═══════════════════════════════════════════════
+// GUARDAR CONTACTO EN TELÉFONO (.vcf)
+// ═══════════════════════════════════════════════
+function guardarContactoTel(){
+  var nombre = document.getElementById('ep-nombre')?.value || '';
+  var tel = document.getElementById('ep-tel')?.value || '';
+  var email = document.getElementById('ep-email')?.value || '';
+  var empresa = document.getElementById('ep-empresa')?.value || '';
+  if(!nombre || !tel){ toast('El contacto necesita nombre y teléfono'); return; }
+
+  var tel_intl = '+' + tel.replace(/[^0-9]/g, '');
+  var vcf = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    'FN:'+nombre,
+    'N:'+nombre+';;;;',
+    empresa ? 'ORG:'+empresa : '',
+    'TEL;TYPE=CELL:'+tel_intl,
+    email ? 'EMAIL:'+email : '',
+    'NOTE:Contacto de NIVIKO CRM',
+    'END:VCARD'
+  ].filter(Boolean).join('
+');
+
+  var blob = new Blob([vcf], { type: 'text/vcard' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = nombre.replace(/\s+/g,'-') + '.vcf';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('📱 Archivo .vcf descargado — abrilo para agregar el contacto');
+}
+
 function openMail(e){window.open(`mailto:${e}`,'_blank');}
 function openIG(ig){window.open(`https://instagram.com/${ig.replace('@','')}`,'_blank');}
 function toast(msg){
