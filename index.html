@@ -3426,8 +3426,7 @@ function guardarContactoTel(){
     email ? 'EMAIL:'+email : '',
     'NOTE:Contacto de NIVIKO CRM',
     'END:VCARD'
-  ].filter(Boolean).join('
-');
+  ].filter(Boolean).join('\r\n');
 
   var blob = new Blob([vcf], { type: 'text/vcard' });
   var url = URL.createObjectURL(blob);
