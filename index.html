@@ -370,6 +370,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
         <button class="fbtn" data-f="interesado" onclick="setF(this,'interesado')">Interesado</button>
         <button class="fbtn" data-f="cliente" onclick="setF(this,'cliente')">Cliente</button>
         <div id="rubroFtrs" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        <button class="btn btn-g" style="font-size:12px" onclick="fixDireccionesEnNombre()">🔧 Corregir direcciones</button>
         <button class="btn btn-g" style="margin-left:auto;font-size:12px" onclick="checkDuplicates()">🔍 Duplicados</button>
       </div>
       <div class="tbl">
@@ -3602,6 +3603,51 @@ function guardarContactoTel(){
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   toast('📱 Archivo .vcf descargado — abrilo para agregar el contacto');
+}
+
+// ═══════════════════════════════════════════════
+// FIX: Corregir direcciones en campo nombre
+// ═══════════════════════════════════════════════
+function esDireccion(texto){
+  if(!texto) return false;
+  var t = texto.trim();
+  // Patrones típicos de dirección argentina
+  var patrones = [
+    /^(av\.?|avenida|calle|ruta|col\.?|colectora|tambor|belgrano|mitre|rivadavia|san\s|santa\s|dr\.?|gral\.?|ing\.?)/i,
+    /\d{2,5}$/, // termina en número (nro de calle)
+    /^[a-záéíóúñ\s\.]+\s+\d{2,5}/i, // texto + número
+    /ruta\s*\d+/i,
+    /^(corrientes|florida|lavalle|tucumán|sarmiento|mendoza|córdoba|entre\s+ríos)\s+\d/i,
+  ];
+  return patrones.some(function(p){ return p.test(t); }) && t.length < 60;
+}
+
+function fixDireccionesEnNombre(){
+  var ps = getP();
+  var candidatos = ps.filter(function(p){
+    return esDireccion(p.nombre) && !p.direccion;
+  });
+
+  if(!candidatos.length){
+    toast('✅ No se encontraron contactos con dirección en el campo Empresa');
+    return;
+  }
+
+  if(!confirm('Se encontraron '+candidatos.length+' contactos donde el nombre parece una dirección.\n\nSe va a mover ese valor al campo Dirección y el campo Empresa quedará vacío para que lo completes.\n\n¿Continuar?')) return;
+
+  var corregidos = 0;
+  ps.forEach(function(p, idx){
+    if(esDireccion(p.nombre) && !p.direccion){
+      ps[idx].direccion = p.nombre;
+      ps[idx].nombre = p.razon || p.contacto || '(empresa sin nombre)';
+      corregidos++;
+    }
+  });
+
+  saveP_data(ps);
+  renderAll();
+  renderStats();
+  toast('✅ '+corregidos+' contactos corregidos — revisá los que quedaron como "(empresa sin nombre)"');
 }
 
 function onZonaSelectChange(sel){
