@@ -389,7 +389,55 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
         <div class="scraper-card">
           <div class="sc-title">🗺 Búsqueda por zona</div>
           <div class="sc-sub">Hasta 60 resultados por búsqueda con paginación automática.</div>
-          <div class="fg"><label class="flbl">Zona / Ciudad</label><input class="fi" id="sc-zona" value="CABA, Argentina"></div>
+          <div class="fg">
+            <label class="flbl">Provincia / Ciudad</label>
+            <select class="fs" id="sc-zona-select" onchange="onZonaSelectChange(this)">
+              <optgroup label="── CABA y GBA ──">
+                <option value="CABA, Argentina">CABA (Capital Federal)</option>
+                <option value="La Matanza, Buenos Aires, Argentina">La Matanza</option>
+                <option value="Lomas de Zamora, Buenos Aires, Argentina">Lomas de Zamora</option>
+                <option value="Quilmes, Buenos Aires, Argentina">Quilmes</option>
+                <option value="Lanús, Buenos Aires, Argentina">Lanús</option>
+                <option value="Morón, Buenos Aires, Argentina">Morón</option>
+                <option value="San Martín, Buenos Aires, Argentina">San Martín GBA</option>
+                <option value="Tigre, Buenos Aires, Argentina">Tigre</option>
+                <option value="Mar del Plata, Argentina">Mar del Plata</option>
+                <option value="La Plata, Argentina">La Plata</option>
+                <option value="Bahía Blanca, Argentina">Bahía Blanca</option>
+              </optgroup>
+              <optgroup label="── Interior ──">
+                <option value="Córdoba, Argentina">Córdoba capital</option>
+                <option value="Rosario, Santa Fe, Argentina">Rosario</option>
+                <option value="Santa Fe, Argentina">Santa Fe capital</option>
+                <option value="Mendoza, Argentina">Mendoza</option>
+                <option value="Tucumán, Argentina">Tucumán</option>
+                <option value="Salta, Argentina">Salta</option>
+                <option value="Jujuy, Argentina">Jujuy</option>
+                <option value="Posadas, Misiones, Argentina">Posadas (Misiones)</option>
+                <option value="Corrientes, Argentina">Corrientes</option>
+                <option value="Resistencia, Chaco, Argentina">Resistencia (Chaco)</option>
+                <option value="Paraná, Entre Ríos, Argentina">Paraná (Entre Ríos)</option>
+                <option value="San Juan, Argentina">San Juan</option>
+                <option value="San Luis, Argentina">San Luis</option>
+                <option value="Neuquén, Argentina">Neuquén</option>
+                <option value="Viedma, Río Negro, Argentina">Viedma (Río Negro)</option>
+                <option value="Rawson, Chubut, Argentina">Rawson (Chubut)</option>
+                <option value="La Rioja, Argentina">La Rioja</option>
+                <option value="Catamarca, Argentina">Catamarca</option>
+                <option value="Santiago del Estero, Argentina">Santiago del Estero</option>
+                <option value="Formosa, Argentina">Formosa</option>
+                <option value="Santa Rosa, La Pampa, Argentina">Santa Rosa (La Pampa)</option>
+              </optgroup>
+              <optgroup label="──────────────">
+                <option value="__custom__">✏ Escribir manualmente...</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="fg" id="sc-zona-manual" style="display:none">
+            <label class="flbl">Ciudad personalizada</label>
+            <input class="fi" id="sc-zona-custom-input" value="CABA, Argentina" placeholder="Ej: Villa María, Córdoba, Argentina" oninput="document.getElementById('sc-zona').value=this.value">
+          </div>
+          <input type="hidden" id="sc-zona" value="CABA, Argentina">
           <div class="fg"><label class="flbl">Rubro</label><select class="fs" id="sc-rubro"><option value="">Seleccionar...</option></select></div>
           <button class="btn btn-p" style="width:100%;margin-top:8px" onclick="runScraper()">🔍 Buscar en esta zona (hasta 60)</button>
         </div>
@@ -861,8 +909,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
           <div class="fg" style="margin-bottom:10px">
             <label class="flbl">Filtrar por estado</label>
             <select class="fs" id="bc-status">
+              <option value="todos">Todos los contactos</option>
               <option value="nuevo">Solo nuevos (sin contactar)</option>
-              <option value="todos">Todos</option>
+              <option value="contactado">Contactados</option>
               <option value="interesado">Interesados</option>
             </select>
           </div>
@@ -1319,7 +1368,7 @@ function renderStats(){
 
   // ── Stats base de contactos ──────────────────────────
   var total    = ps.length;
-  var conWA    = ps.filter(function(p){ return p.WhatsApp && String(p.WhatsApp).replace(/[^0-9]/g,'').length > 6; }).length;
+  var conWA    = ps.filter(function(p){ return p.WhatsApp && String(p.WhatsApp).replace(/[^0-9]/g,'').length >= 9; }).length;
   var conEmail = ps.filter(function(p){ return p.email && String(p.email).includes('@'); }).length;
   var conTel   = ps.filter(function(p){ return p.tel && String(p.tel).replace(/[^0-9]/g,'').length > 6; }).length;
   var sinNada  = ps.filter(function(p){ return !p.WhatsApp && !p.email && !p.tel; }).length;
@@ -1339,7 +1388,7 @@ function renderStats(){
       var r = p.red || p.Red || 'Sin red';
       if(!redes[r]) redes[r] = {cnt:0, wa:0, email:0};
       redes[r].cnt++;
-      if(p.WhatsApp && String(p.WhatsApp).replace(/[^0-9]/g,'').length>6) redes[r].wa++;
+      if(p.WhatsApp && String(p.WhatsApp).replace(/[^0-9]/g,'').length>=9) redes[r].wa++;
       if(p.email && String(p.email).includes('@')) redes[r].email++;
     });
     var html = '<table style="width:100%;border-collapse:collapse;font-size:11px">';
@@ -1863,8 +1912,8 @@ function previewImport(rows,fname){
   document.getElementById('importPreview').style.display='block';
   document.getElementById('prev-cnt').textContent=data.length+' filas en '+fname;
   // Auto-map columns
-  const fields=['nombre','contacto','tel','email','ig','zona','rubro','estado','notas'];
-  const fieldLabels={nombre:'Empresa *',contacto:'Contacto',tel:'Teléfono',email:'Email',ig:'Instagram',zona:'Zona',rubro:'Rubro',estado:'Estado',notas:'Notas'};
+  const fields=['nombre','contacto','tel','WhatsApp','email','ig','zona','ciudad','provincia','direccion','red','rubro','estado','notas'];
+  const fieldLabels={nombre:'Empresa *',contacto:'Contacto',tel:'Teléfono',WhatsApp:'WhatsApp',email:'Email',ig:'Instagram',zona:'Zona / Barrio',ciudad:'Ciudad',provincia:'Provincia',direccion:'Dirección',red:'Red de compras',rubro:'Rubro',estado:'Estado',notas:'Notas'};
   const autoMap={};
   headers.forEach((h,i)=>{
     const hl=h.toLowerCase();
@@ -1873,7 +1922,12 @@ function previewImport(rows,fname){
     else if(hl.includes('tel')||hl.includes('phone')||hl.includes('celular')||hl.includes('whatsapp'))autoMap['tel']=i;
     else if(hl.includes('mail')||hl.includes('email'))autoMap['email']=i;
     else if(hl.includes('ig')||hl.includes('instagram'))autoMap['ig']=i;
-    else if(hl.includes('zona')||hl.includes('barrio')||hl.includes('ciudad')||hl.includes('localidad'))autoMap['zona']=i;
+    else if(hl.includes('zona')||hl.includes('barrio'))autoMap['zona']=i;
+    else if(hl==='ciudad'||hl.includes('localidad'))autoMap['ciudad']=i;
+    else if(hl.includes('provincia'))autoMap['provincia']=i;
+    else if(hl.includes('direcci')||hl.includes('domicilio')||hl.includes('address'))autoMap['direccion']=i;
+    else if(hl.includes('whatsapp')||hl==='wa')autoMap['WhatsApp']=i;
+    else if(hl.includes('red')&&!hl.includes('email'))autoMap['red']=i;
     else if(hl.includes('rubro')||hl.includes('categoria')||hl.includes('tipo'))autoMap['rubro']=i;
     else if(hl.includes('estado')||hl.includes('status'))autoMap['estado']=i;
     else if(hl.includes('nota')||hl.includes('obs')||hl.includes('comment'))autoMap['notas']=i;
@@ -1910,9 +1964,14 @@ function importData(){
       id:Date.now()+added,nombre,
       contacto:(row[getMap('contacto')]||'').toString().trim(),
       tel:(row[getMap('tel')]||'').toString().replace(/\D/g,''),
+      WhatsApp:(row[getMap('WhatsApp')]||'').toString().replace(/\D/g,''),
       email:(row[getMap('email')]||'').toString().trim(),
       ig:(row[getMap('ig')]||'').toString().trim(),
       zona:(row[getMap('zona')]||'').toString().trim(),
+      ciudad:(row[getMap('ciudad')]||'').toString().trim(),
+      provincia:(row[getMap('provincia')]||'').toString().trim(),
+      direccion:(row[getMap('direccion')]||'').toString().trim(),
+      red:(row[getMap('red')]||'').toString().trim(),
       rubro:rubro||RUBROS[ST.co][0],
       estado:validEstados.includes(estado)?estado:'nuevo',
       notas:(row[getMap('notas')]||'').toString().trim(),
@@ -2046,7 +2105,9 @@ function loadBroadcastContacts(){
 
   // Filter: must have WhatsApp or phone
   var filtered = ps.filter(function(p){
-    var hasContact = (p.WhatsApp && p.WhatsApp.length > 5) || (p.tel && p.tel.length > 7);
+    var waOk  = p.WhatsApp && String(p.WhatsApp).replace(/[^0-9]/g,'').length >= 9;
+    var telOk = p.tel && String(p.tel).replace(/[^0-9]/g,'').length >= 8;
+    var hasContact = waOk || telOk;
     var rubroMatch = !rubro || p.rubro === rubro;
     var statusMatch = status === 'todos' || p.estado === status;
     return hasContact && rubroMatch && statusMatch;
@@ -2055,9 +2116,10 @@ function loadBroadcastContacts(){
   bcContacts = filtered;
   bcSelected = filtered.map(function(p){ return p.id; }); // Select all by default
 
-  var waCount = filtered.filter(function(p){ return p.WhatsApp && p.WhatsApp.length > 5; }).length;
+  var waCount  = filtered.filter(function(p){ return p.WhatsApp && String(p.WhatsApp).replace(/[^0-9]/g,'').length >= 9; }).length;
+  var telCount = filtered.filter(function(p){ return !p.WhatsApp && p.tel && String(p.tel).replace(/[^0-9]/g,'').length >= 8; }).length;
   var el = document.getElementById('bc-wa-count');
-  if(el) el.textContent = waCount;
+  if(el) el.textContent = waCount + ' WA + ' + telCount + ' solo tel';
   updateBCSelectedCount();
   renderBCContacts();
 }
@@ -3363,25 +3425,31 @@ async function enrichProspect(id){
   
   try {
     // Search Maps for this business
-    let url='/api/maps?query='+encodeURIComponent(p.nombre+(p.zona?' '+p.zona:''))+'&key='+mapsKey;
+    // Usar ciudad/provincia si tiene, sino zona
+    var ubicacion = p.ciudad || p.zona || p.provincia || '';
+    var searchQ = p.nombre + (ubicacion ? ' ' + ubicacion : ' Argentina');
+    let url='/api/maps?query='+encodeURIComponent(searchQ)+'&key='+mapsKey;
+    console.log('Buscando:', searchQ);
     const r=await fetch(url);
     const data=await r.json();
     
     if(data.results&&data.results.length>0){
       const best=data.results[0];
       // Merge: don't overwrite existing data
-      if(!p.tel&&best.tel) ps[idx].tel=best.tel;
-      if(!p.WhatsApp&&best.whatsapp) ps[idx].WhatsApp=best.whatsapp;
-      if(!p.email&&best.email) ps[idx].email=best.email;
-      if(!p.ig&&best.instagram) ps[idx].ig=best.instagram;
-      if(!p.website&&best.website) ps[idx].website=best.website;
-      if(!p.rating&&best.rating) ps[idx].rating=best.rating;
-      if(!p.zona&&best.zona) ps[idx].zona=best.zona;
-      ps[idx].notas=(ps[idx].notas||'')+(best.website?'\nWeb: '+best.website:'');
+      var changed = [];
+      if(!p.tel&&best.tel){ ps[idx].tel=best.tel; changed.push('tel'); }
+      if(!p.WhatsApp&&best.whatsapp){ ps[idx].WhatsApp=best.whatsapp; changed.push('WA'); }
+      if(!p.email&&best.email){ ps[idx].email=best.email; changed.push('email'); }
+      if(!p.ig&&best.instagram){ ps[idx].ig=best.instagram; changed.push('IG'); }
+      if(best.website){ ps[idx].website=best.website; changed.push('web'); }
+      if(best.rating){ ps[idx].rating=parseFloat(best.rating)||ps[idx].rating; }
+      if(!p.direccion&&best.address){ ps[idx].direccion=best.address; changed.push('dirección'); }
+      if(!p.ciudad&&best.city){ ps[idx].ciudad=best.city; }
+      var changedStr = changed.length ? changed.join(', ') : 'sin datos nuevos';
       saveP_data(ps);
       // Update modal fields
       showProspect(id);
-      toast('✅ Datos enriquecidos para '+p.nombre);
+      toast('✅ '+p.nombre+': '+changedStr);
     } else {
       toast('⚠ No se encontraron datos adicionales en Maps');
     }
@@ -3534,6 +3602,21 @@ function guardarContactoTel(){
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   toast('📱 Archivo .vcf descargado — abrilo para agregar el contacto');
+}
+
+function onZonaSelectChange(sel){
+  var val = sel.value;
+  var manualWrap = document.getElementById('sc-zona-manual');
+  var hiddenInput = document.querySelector('input[type="hidden"]#sc-zona');
+  if(val === '__custom__'){
+    if(manualWrap) manualWrap.style.display = 'block';
+    // El input visible toma el control
+    var visibleInput = document.getElementById('sc-zona');
+    if(visibleInput && visibleInput.type !== 'hidden') visibleInput.focus();
+  } else {
+    if(manualWrap) manualWrap.style.display = 'none';
+    document.getElementById('sc-zona').value = val;
+  }
 }
 
 function openMail(e){window.open(`mailto:${e}`,'_blank');}
