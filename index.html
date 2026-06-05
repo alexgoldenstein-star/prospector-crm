@@ -363,18 +363,40 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
     <!-- PROSPECTOS -->
     <div class="panel" id="panel-prospectos">
       <div class="filters">
-        <input class="srch" placeholder="Buscar nombre, zona..." id="srchInput" oninput="renderP()">
+        <input class="srch" placeholder="Buscar nombre, zona, ciudad..." id="srchInput" oninput="renderP()">
         <button class="fbtn active" data-f="all" onclick="setF(this,'all')">Todos</button>
         <button class="fbtn" data-f="nuevo" onclick="setF(this,'nuevo')">Nuevo</button>
         <button class="fbtn" data-f="contactado" onclick="setF(this,'contactado')">Contactado</button>
         <button class="fbtn" data-f="interesado" onclick="setF(this,'interesado')">Interesado</button>
         <button class="fbtn" data-f="cliente" onclick="setF(this,'cliente')">Cliente</button>
         <div id="rubroFtrs" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;width:100%;align-items:center">
+          <span style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px">Filtrar:</span>
+          <select class="fs" id="f-red" style="font-size:11px;padding:4px 8px;height:28px" onchange="renderP()">
+            <option value="">Todas las redes</option>
+          </select>
+          <select class="fs" id="f-provincia" style="font-size:11px;padding:4px 8px;height:28px" onchange="renderP()">
+            <option value="">Todas las provincias</option>
+          </select>
+          <select class="fs" id="f-vendedor" style="font-size:11px;padding:4px 8px;height:28px" onchange="renderP()">
+            <option value="">Todos los vendedores</option>
+            <option value="v1">Vendedor 1</option>
+            <option value="v2">Vendedor 2</option>
+            <option value="">Sin asignar</option>
+          </select>
+          <select class="fs" id="f-datos" style="font-size:11px;padding:4px 8px;height:28px" onchange="renderP()">
+            <option value="">Todos los datos</option>
+            <option value="conWA">Con WhatsApp</option>
+            <option value="conEmail">Con Email</option>
+            <option value="sinDatos">Sin datos de contacto</option>
+          </select>
+          <button class="btn btn-g" style="font-size:11px;padding:4px 10px;height:28px" onclick="resetFiltros()">↺ Limpiar</button>
+        </div>
         <button class="btn btn-g" style="font-size:12px" onclick="fixDireccionesEnNombre()">🔧 Corregir direcciones</button>
         <button class="btn btn-g" style="margin-left:auto;font-size:12px" onclick="checkDuplicates()">🔍 Duplicados</button>
       </div>
       <div class="tbl">
-        <div class="tbl-hdr"><div>Empresa</div><div>Rubro</div><div class="col-zona">Zona</div><div class="col-rating">Rating</div><div>Estado</div><div>Acciones</div></div>
+        <div class="tbl-hdr"><div>Empresa <span id="p-count-visible" style="font-size:10px;color:var(--text3);font-weight:400;margin-left:6px"></span></div><div>Rubro</div><div class="col-zona">Zona / Ciudad</div><div class="col-rating">Rating</div><div>Estado</div><div>Acciones</div></div>
         <div id="pBody"></div>
       </div>
     </div>
@@ -1304,7 +1326,7 @@ window.addEventListener('DOMContentLoaded',()=>{
 });
 
 function renderAll(){
-  renderStats();renderP();renderPipe();renderDashRecent();
+  renderStats();renderP();renderPipe();renderDashRecent();populateFiltrosProspectos();
   populateMsgSelect();populateSimSelect();renderReports();renderActiveConvs();
 }
 
@@ -1332,6 +1354,7 @@ function showPanel(n){
   const t={dashboard:'Dashboard',prospectos:'Prospectos',pipeline:'Pipeline',scraper:'Scraper Maps',importar:'Importar Contactos',emails:'Campañas Email',mensajes:'Mensajes IA',training:'Entrenar Bot',bot:'Bot WhatsApp',broadcast:'Difusión Masiva',reportes:'Reportes',config:'Configuración',setup:'Guía de Setup'};
   document.getElementById('panelTitle').textContent=t[n]||n;
   setNav(n);
+  if(n==='prospectos'){populateFiltrosProspectos();}
   if(n==='mensajes')populateMsgSelect();
   if(n==='emails')initEmailPanel();
   if(n==='training'){loadPersona();resetTrainSim();loadResources();customPersonas=JSON.parse(localStorage.getItem('crm_personas')||'{}');faqs=JSON.parse(localStorage.getItem('crm_faqs')||'{}');loadPersona();}
@@ -1435,14 +1458,59 @@ let fStatus='all',fRubro='all';
 function setF(el,v){fStatus=v;document.querySelectorAll('.fbtn[data-f]').forEach(b=>b.classList.toggle('active',b.dataset.f===v));renderP();}
 function setFR(el,v){fRubro=v;document.querySelectorAll('.fbtn[data-r]').forEach(b=>b.classList.toggle('active',b.dataset.r===v));renderP();}
 
+function resetFiltros(){
+  var srch=document.getElementById('srchInput'); if(srch) srch.value='';
+  ['f-red','f-provincia','f-vendedor','f-datos'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  fStatus='all'; fRubro='all';
+  document.querySelectorAll('.fbtn[data-f]').forEach(b=>b.classList.toggle('active',b.dataset.f==='all'));
+  renderP();
+}
+
+function populateFiltrosProspectos(){
+  var ps = getP();
+  var redSel = document.getElementById('f-red');
+  var provSel = document.getElementById('f-provincia');
+  if(redSel){
+    var redes = [...new Set(ps.map(function(p){ return p.red||p.Red||''; }).filter(Boolean))].sort();
+    redSel.innerHTML = '<option value="">Todas las redes</option>' + redes.map(function(r){ return '<option value="'+r+'">'+r+' ('+ps.filter(function(p){ return (p.red||p.Red||'')=== r; }).length+')</option>'; }).join('');
+  }
+  if(provSel){
+    var provs = [...new Set(ps.map(function(p){ return p.provincia||''; }).filter(Boolean))].sort();
+    provSel.innerHTML = '<option value="">Todas las provincias</option>' + provs.map(function(p){ return '<option value="'+p+'">'+p+' ('+ps.filter(function(x){ return (x.provincia||'')=== p; }).length+')</option>'; }).join('');
+  }
+}
+
 function renderP(){
   const srch=(document.getElementById('srchInput')?.value||'').toLowerCase();
+  const fRed = document.getElementById('f-red')?.value || '';
+  const fProv = document.getElementById('f-provincia')?.value || '';
+  const fVend = document.getElementById('f-vendedor')?.value || '';
+  const fDatos = document.getElementById('f-datos')?.value || '';
   let ps=getP().filter(p=>{
     const ms=fStatus==='all'||p.estado===fStatus;
     const mr=fRubro==='all'||p.rubro===fRubro;
-    const mq=!srch||p.nombre.toLowerCase().includes(srch)||(p.zona||'').toLowerCase().includes(srch)||(p.rubro||'').toLowerCase().includes(srch);
-    return ms&&mr&&mq;
+    const mred=!fRed||(p.red||p.Red||'')=== fRed;
+    const mprov=!fProv||(p.provincia||'')===fProv;
+    const mvend=!fVend||(p.vendedor||'')=== fVend;
+    var mDatos=true;
+    if(fDatos==='conWA') mDatos=p.WhatsApp && String(p.WhatsApp).replace(/[^0-9]/g,'').length>=9;
+    else if(fDatos==='conEmail') mDatos=p.email && p.email.includes('@');
+    else if(fDatos==='sinDatos') mDatos=!p.WhatsApp && !p.email && !p.tel;
+    const mq=!srch||
+      (p.nombre||'').toLowerCase().includes(srch)||
+      (p.zona||'').toLowerCase().includes(srch)||
+      (p.rubro||'').toLowerCase().includes(srch)||
+      (p.ciudad||'').toLowerCase().includes(srch)||
+      (p.provincia||'').toLowerCase().includes(srch)||
+      (p.red||'').toLowerCase().includes(srch)||
+      (p.contacto||'').toLowerCase().includes(srch);
+    return ms&&mr&&mred&&mprov&&mvend&&mDatos&&mq;
   });
+  // Actualizar total visible
+  var countEl = document.getElementById('p-count-visible');
+  if(countEl) countEl.textContent = ps.length + ' contactos';
   const b=document.getElementById('pBody');
   if(!b)return;
   b.innerHTML=ps.length?ps.map(pRow).join(''):'<div style="padding:22px;text-align:center;color:var(--text3)">No hay prospectos con ese filtro.</div>';
@@ -3639,7 +3707,12 @@ function fixDireccionesEnNombre(){
   ps.forEach(function(p, idx){
     if(esDireccion(p.nombre) && !p.direccion){
       ps[idx].direccion = p.nombre;
-      ps[idx].nombre = p.razon || p.contacto || '(empresa sin nombre)';
+      // Intentar rescatar nombre de otros campos
+      var nombreRescatado = '';
+      if(p.razon && !esDireccion(p.razon)) nombreRescatado = p.razon;
+      else if(p.notas && p.notas.length > 2 && !esDireccion(p.notas)) nombreRescatado = p.notas.split('\n')[0].substring(0,50);
+      ps[idx].nombre = nombreRescatado || '⚠ Sin nombre - completar';
+      ps[idx].estado = nombreRescatado ? ps[idx].estado : 'nuevo';
       corregidos++;
     }
   });
