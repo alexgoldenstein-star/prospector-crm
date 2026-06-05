@@ -305,23 +305,59 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px
 
     <!-- DASHBOARD -->
     <div class="panel active" id="panel-dashboard">
+      <!-- Stats pipeline -->
       <div class="stats">
         <div class="stat"><div class="stat-lbl">Prospectos</div><div class="stat-val" id="s-total">0</div><div class="stat-sub" id="s-co">NIVIKO</div></div>
         <div class="stat"><div class="stat-lbl">Contactados</div><div class="stat-val" id="s-cont">0</div><div class="stat-sub"><span>en seguimiento</span></div></div>
         <div class="stat"><div class="stat-lbl">Interesados</div><div class="stat-val" id="s-int">0</div><div class="stat-sub"><span>↑ oportunidades</span></div></div>
         <div class="stat"><div class="stat-lbl">Clientes</div><div class="stat-val" id="s-cli">0</div><div class="stat-sub"><span>convertidos</span></div></div>
       </div>
+
+      <!-- Dashboard de base -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px" id="dash-base-stats">
+        <div class="scraper-card" style="text-align:center;padding:14px 8px">
+          <div style="font-size:26px;font-weight:700;color:var(--text)" id="db-total">—</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;margin-top:2px">Total base</div>
+        </div>
+        <div class="scraper-card" style="text-align:center;padding:14px 8px">
+          <div style="font-size:26px;font-weight:700;color:#25d366" id="db-wa">—</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;margin-top:2px">Con WhatsApp</div>
+        </div>
+        <div class="scraper-card" style="text-align:center;padding:14px 8px">
+          <div style="font-size:26px;font-weight:700;color:#4FC3F7" id="db-email">—</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;margin-top:2px">Con Email</div>
+        </div>
+        <div class="scraper-card" style="text-align:center;padding:14px 8px">
+          <div style="font-size:26px;font-weight:700;color:var(--orange)" id="db-tel">—</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;margin-top:2px">Con Teléfono</div>
+        </div>
+        <div class="scraper-card" style="text-align:center;padding:14px 8px">
+          <div style="font-size:26px;font-weight:700;color:#ef5350" id="db-sin">—</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;margin-top:2px">Sin datos</div>
+        </div>
+      </div>
+
+      <!-- Tabla por red -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+        <div class="scraper-card">
+          <div class="sc-title">📡 Cobertura por Red</div>
+          <div id="db-tabla-redes" style="font-size:12px"></div>
+        </div>
+        <div class="scraper-card">
+          <div class="sc-title">📊 Barra de contactabilidad</div>
+          <div id="db-barra-contactabilidad"></div>
+          <div style="margin-top:14px" class="sc-title">🎯 Acciones rápidas</div>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:8px">
+            <button class="btn btn-g" onclick="showPanel('cola');setNav('cola')">📲 Ir a Cola Manual</button>
+            <button class="btn btn-g" onclick="showPanel('broadcast');setNav('broadcast')">📡 Difusión Masiva</button>
+            <button class="btn btn-p" onclick="enrichAllProspects()" style="background:var(--accent-b)">🔍 Enriquecer base</button>
+            <button class="btn btn-p" onclick="showPanel('broadcast');setNav('broadcast');setTimeout(validateAllPhones,500)" style="background:#25d366;color:#000">💬 Validar WA y Difundir</button>
+          </div>
+        </div>
+      </div>
+
       <div class="sec-hdr"><div class="sec-title">Últimos prospectos</div></div>
       <div id="dash-recent"></div>
-      <div style="margin-top:20px" class="sec-hdr"><div class="sec-title">Acciones rápidas</div></div>
-      <div style="display:flex;gap:9px;flex-wrap:wrap;">
-          <button class="btn btn-g" onclick="showPanel('scraper');setNav('scraper')">⊕ Buscar en Google Maps</button>
-          <button class="btn btn-g" onclick="showPanel('importar');setNav('importar')">↑ Importar Excel/CSV</button>
-          <button class="btn btn-g" onclick="showPanel('mensajes');setNav('mensajes')">✦ Generar mensaje IA</button>
-          <button class="btn btn-g" onclick="showPanel('reportes');setNav('reportes')">▦ Ver reporte</button>
-          <button class="btn btn-p" onclick="enrichAllProspects()" style="background:var(--accent-b)">🔍 Enriquecer base</button>
-          <button class="btn btn-p" onclick="showPanel('broadcast');setNav('broadcast');setTimeout(validateAllPhones,500)" style="background:#25d366;color:#000">💬 Validar WA y Difundir</button>
-        </div>
     </div>
 
     <!-- PROSPECTOS -->
@@ -1275,11 +1311,71 @@ function saveP_data(d){localStorage.setItem('crm_p_'+ST.co,JSON.stringify(d));}
 // STATS
 // ═══════════════════════════════════════════════
 function renderStats(){
-  const p=getP();
-  document.getElementById('s-total').textContent=p.length;
-  document.getElementById('s-cont').textContent=p.filter(x=>x.estado==='contactado').length;
-  document.getElementById('s-int').textContent=p.filter(x=>x.estado==='interesado').length;
-  document.getElementById('s-cli').textContent=p.filter(x=>x.estado==='cliente').length;
+  const ps=getP();
+  document.getElementById('s-total').textContent=ps.length;
+  document.getElementById('s-cont').textContent=ps.filter(x=>x.estado==='contactado').length;
+  document.getElementById('s-int').textContent=ps.filter(x=>x.estado==='interesado').length;
+  document.getElementById('s-cli').textContent=ps.filter(x=>x.estado==='cliente').length;
+
+  // ── Stats base de contactos ──────────────────────────
+  var total    = ps.length;
+  var conWA    = ps.filter(function(p){ return p.WhatsApp && String(p.WhatsApp).replace(/[^0-9]/g,'').length > 6; }).length;
+  var conEmail = ps.filter(function(p){ return p.email && String(p.email).includes('@'); }).length;
+  var conTel   = ps.filter(function(p){ return p.tel && String(p.tel).replace(/[^0-9]/g,'').length > 6; }).length;
+  var sinNada  = ps.filter(function(p){ return !p.WhatsApp && !p.email && !p.tel; }).length;
+
+  ['db-total','db-wa','db-email','db-tel','db-sin'].forEach(function(id, i){
+    var el = document.getElementById(id);
+    if(!el) return;
+    var val = [total, conWA, conEmail, conTel, sinNada][i];
+    el.textContent = val.toLocaleString('es-AR');
+  });
+
+  // ── Tabla por red ────────────────────────────────────
+  var redesEl = document.getElementById('db-tabla-redes');
+  if(redesEl && total > 0){
+    var redes = {};
+    ps.forEach(function(p){
+      var r = p.red || p.Red || 'Sin red';
+      if(!redes[r]) redes[r] = {cnt:0, wa:0, email:0};
+      redes[r].cnt++;
+      if(p.WhatsApp && String(p.WhatsApp).replace(/[^0-9]/g,'').length>6) redes[r].wa++;
+      if(p.email && String(p.email).includes('@')) redes[r].email++;
+    });
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:11px">';
+    html += '<tr style="color:var(--text3);font-family:var(--fm);font-size:10px"><th style="text-align:left;padding:3px 4px">Red</th><th style="text-align:right;padding:3px 4px">Total</th><th style="text-align:right;padding:3px 4px;color:#25d366">WA</th><th style="text-align:right;padding:3px 4px;color:#4FC3F7">Email</th><th style="text-align:right;padding:3px 4px">%WA</th></tr>';
+    Object.entries(redes).sort(function(a,b){ return b[1].cnt-a[1].cnt; }).forEach(function(entry, i){
+      var red=entry[0], d=entry[1];
+      var pct = d.cnt ? Math.round(d.wa/d.cnt*100) : 0;
+      var sem = pct>30?'🟢':pct>10?'🟡':'🔴';
+      var bg = i%2===0?'var(--bg3)':'transparent';
+      html += '<tr style="background:'+bg+'"><td style="padding:4px;font-weight:500">'+sem+' '+red+'</td><td style="padding:4px;text-align:right">'+d.cnt+'</td><td style="padding:4px;text-align:right;color:#25d366">'+d.wa+'</td><td style="padding:4px;text-align:right;color:#4FC3F7">'+d.email+'</td><td style="padding:4px;text-align:right;color:var(--text3)">'+pct+'%</td></tr>';
+    });
+    html += '</table>';
+    redesEl.innerHTML = html;
+  }
+
+  // ── Barras de contactabilidad ─────────────────────────
+  var barEl = document.getElementById('db-barra-contactabilidad');
+  if(barEl && total > 0){
+    var bars = [
+      {label:'WhatsApp', val:conWA, color:'#25d366'},
+      {label:'Email', val:conEmail, color:'#4FC3F7'},
+      {label:'Teléfono', val:conTel, color:'var(--orange)'},
+      {label:'Sin datos', val:sinNada, color:'#ef5350'},
+    ];
+    barEl.innerHTML = bars.map(function(b){
+      var pct = Math.round(b.val/total*100);
+      return '<div style="margin-bottom:10px">'+
+        '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">'+
+          '<span style="color:var(--text2)">'+b.label+'</span>'+
+          '<span style="color:var(--text3)">'+b.val.toLocaleString('es-AR')+' ('+pct+'%)</span>'+
+        '</div>'+
+        '<div style="height:10px;background:var(--bg4);border-radius:5px;overflow:hidden">'+
+          '<div style="height:100%;width:'+pct+'%;background:'+b.color+';border-radius:5px"></div>'+
+        '</div></div>';
+    }).join('');
+  }
 }
 
 // ═══════════════════════════════════════════════
