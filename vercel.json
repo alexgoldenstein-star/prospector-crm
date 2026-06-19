@@ -4,6 +4,8 @@
     { "src": "/api/(.*)", "dest": "/api/$1" },
     { "src": "/privacy", "dest": "/privacy.html" },
     { "src": "/privacy.html", "dest": "/privacy.html" },
+    { "src": "/inmobiliaria", "dest": "/inmobiliaria.html" },
+    { "src": "/inmobiliaria.html", "dest": "/inmobiliaria.html" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
