@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>G&P · Prospección Inmobiliarias</title>
+<style>
+  :root{
+    --bg:#0a0a0f; --bg2:#13131a; --bg3:#1a1a24; --bg4:#22222e;
+    --border:#2a2a38; --text:#f0f0f5; --text2:#b8b8c8; --text3:#7a7a8c;
+    --accent:#6366f1; --accent-b:#818cf8; --green:#22c55e; --orange:#f59e0b; --red:#ef4444;
+    --fm:'SF Mono',Monaco,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh}
+  .app{display:flex;min-height:100vh}
+  .sidebar{width:260px;background:var(--bg2);border-right:1px solid var(--border);padding:24px 18px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto}
+  .logo{font-size:22px;font-weight:800;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px;margin-bottom:2px}
+  .logo-sub{font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:24px}
+  .nav-section{font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1.5px;margin:18px 0 8px;padding-left:4px}
+  .nav-item{width:100%;text-align:left;background:none;border:none;color:var(--text2);padding:10px 12px;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:all .15s}
+  .nav-item:hover{background:var(--bg3);color:var(--text)}
+  .nav-item.active{background:var(--accent);color:#fff;font-weight:600}
+  .content{flex:1;padding:28px 32px;max-width:1400px}
+  .panel{display:none}
+  .panel.active{display:block}
+  .pg-title{font-size:24px;font-weight:700;margin-bottom:4px}
+  .pg-sub{font-size:13px;color:var(--text3);margin-bottom:24px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+  .stat{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px}
+  .stat-val{font-size:28px;font-weight:700}
+  .stat-lbl{font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px}
+  .card-title{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .fg{margin-bottom:12px}
+  .flbl{font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px}
+  .fi,.fs,.fta{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 11px;color:var(--text);font-size:13px;font-family:inherit}
+  .fi:focus,.fs:focus,.fta:focus{outline:none;border-color:var(--accent)}
+  .fta{resize:vertical;min-height:70px}
+  .btn{padding:9px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+  .btn:hover{background:var(--bg4)}
+  .btn-p{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .btn-p:hover{background:var(--accent-b)}
+  .btn-g{background:var(--bg3)}
+  .btn:disabled{opacity:0.4;cursor:not-allowed}
+  .srch{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;width:240px}
+  .tbl-hdr{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1.2fr;gap:10px;padding:10px 14px;font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border)}
+  .tbl-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1.2fr;gap:10px;padding:13px 14px;border-bottom:1px solid var(--border);align-items:center;font-size:13px;cursor:pointer;transition:background .1s}
+  .tbl-row:hover{background:var(--bg3)}
+  .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-family:var(--fm);background:var(--bg4);border:1px solid var(--border)}
+  .pill.s-nuevo{color:var(--accent-b);border-color:var(--accent)}
+  .pill.s-contactado{color:var(--orange);border-color:var(--orange)}
+  .pill.s-interesado{color:var(--green);border-color:var(--green)}
+  .pill.s-no_interesa{color:var(--text3);border-color:var(--text3)}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+  .fbtn{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-size:12px;cursor:pointer}
+  .fbtn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--bg4);border:1px solid var(--border);padding:12px 22px;border-radius:10px;font-size:13px;opacity:0;transition:all .3s;z-index:999;max-width:90%}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:500;padding:20px}
+  .modal-overlay.show{display:flex}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto}
+  .modal-close{float:right;background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .api-row{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text3);padding:4px 0}
+  .sd{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0}
+  .sd.ok{background:var(--green)}
+  .sd.warn{background:var(--orange)}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px}
+  @media(max-width:900px){
+    .app{flex-direction:column}
+    .sidebar{width:100%;height:auto;position:relative}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .tbl-hdr,.tbl-row{grid-template-columns:1.5fr 1fr 1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="logo">🏢 G&amp;P</div>
+    <div class="logo-sub">Prospección Inmobiliarias</div>
+
+    <div class="nav-section">Principal</div>
+    <button class="nav-item active" data-p="dashboard" onclick="showPanel('dashboard')">📊 Dashboard</button>
+    <button class="nav-item" data-p="prospectos" onclick="showPanel('prospectos')">🏢 Inmobiliarias</button>
+
+    <div class="nav-section">Captación</div>
+    <button class="nav-item" data-p="scraper" onclick="showPanel('scraper')">🌐 Scraper Maps</button>
+    <button class="nav-item" data-p="webscrap" onclick="showPanel('webscrap')">🔗 ZonaProp / Argenprop</button>
+
+    <div class="nav-section">Contacto</div>
+    <button class="nav-item" data-p="cola" onclick="showPanel('cola')">📲 Cola de Contacto</button>
+
+    <div class="nav-section">Sistema</div>
+    <button class="nav-item" data-p="config" onclick="showPanel('config')">⚙ Configuración</button>
+
+    <div style="margin-top:28px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Estado APIs</div>
+      <div class="api-row"><span class="sd" id="dot-maps"></span>Google Maps</div>
+      <div class="api-row"><span class="sd" id="dot-firebase"></span>Firebase</div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="pg-title">Dashboard</div>
+      <div class="pg-sub">Prospección de inmobiliarias para ofrecer G&amp;P Negocios Inmobiliarios</div>
+
+      <div class="stats">
+        <div class="stat"><div class="stat-lbl">Inmobiliarias</div><div class="stat-val" id="s-total">0</div></div>
+        <div class="stat"><div class="stat-lbl">Contactadas</div><div class="stat-val" id="s-cont">0</div></div>
+        <div class="stat"><div class="stat-lbl">Interesadas</div><div class="stat-val" id="s-int">0</div></div>
+        <div class="stat"><div class="stat-lbl">Con teléfono/WA</div><div class="stat-val" id="s-wa">0</div></div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">🎯 Acciones rápidas</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-p" onclick="showPanel('scraper')">🌐 Buscar en Google Maps</button>
+            <button class="btn btn-g" onclick="showPanel('webscrap')">🔗 Buscar en ZonaProp/Argenprop</button>
+            <button class="btn btn-g" onclick="showPanel('cola')">📲 Ir a Cola de Contacto</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📋 Últimas agregadas</div>
+          <div id="dash-recent" style="font-size:12px;color:var(--text2)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROSPECTOS (INMOBILIARIAS) -->
+    <div class="panel" id="panel-prospectos">
+      <div class="pg-title">Inmobiliarias</div>
+      <div class="pg-sub">Base completa de inmobiliarias relevadas</div>
+
+      <div class="filters">
+        <input class="srch" id="srchInput" placeholder="Buscar nombre, zona..." oninput="renderP()">
+        <button class="fbtn active" data-f="all" onclick="setF(this,'all')">Todas</button>
+        <button class="fbtn" data-f="nuevo" onclick="setF(this,'nuevo')">Nuevas</button>
+        <button class="fbtn" data-f="contactado" onclick="setF(this,'contactado')">Contactadas</button>
+        <button class="fbtn" data-f="interesado" onclick="setF(this,'interesado')">Interesadas</button>
+        <button class="fbtn" data-f="no_interesa" onclick="setF(this,'no_interesa')">No interesa</button>
+        <button class="btn btn-g" style="margin-left:auto;font-size:12px" onclick="exportCSV()">⬇ Exportar CSV</button>
+      </div>
+
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+        <div class="tbl-hdr"><div>Inmobiliaria</div><div>Zona</div><div>Teléfono</div><div>Fuente</div><div>Estado</div><div>Acciones</div></div>
+        <div id="pBody"></div>
+      </div>
+    </div>
+
+    <!-- SCRAPER GOOGLE MAPS -->
+    <div class="panel" id="panel-scraper">
+      <div class="pg-title">Scraper Google Maps</div>
+      <div class="pg-sub">Busca inmobiliarias por zona usando Google Places API</div>
+
+      <div class="card" style="max-width:560px">
+        <div class="fg">
+          <label class="flbl">Zona</label>
+          <select class="fs" id="sc-zona-select" onchange="onZonaChange(this)">
+            <optgroup label="CABA">
+              <option value="Almagro, CABA, Argentina">Almagro</option>
+              <option value="Villa Crespo, CABA, Argentina">Villa Crespo</option>
+              <option value="Palermo, CABA, Argentina">Palermo</option>
+              <option value="Villa del Parque, CABA, Argentina">Villa del Parque</option>
+              <option value="Caballito, CABA, Argentina">Caballito</option>
+              <option value="Belgrano, CABA, Argentina">Belgrano</option>
+              <option value="Recoleta, CABA, Argentina">Recoleta</option>
+              <option value="Flores, CABA, Argentina">Flores</option>
+              <option value="Núñez, CABA, Argentina">Núñez</option>
+              <option value="CABA, Argentina" selected>CABA (toda la ciudad)</option>
+            </optgroup>
+            <optgroup label="GBA">
+              <option value="Vicente López, Buenos Aires, Argentina">Vicente López</option>
+              <option value="San Isidro, Buenos Aires, Argentina">San Isidro</option>
+              <option value="Tigre, Buenos Aires, Argentina">Tigre</option>
+              <option value="Morón, Buenos Aires, Argentina">Morón</option>
+              <option value="Lomas de Zamora, Buenos Aires, Argentina">Lomas de Zamora</option>
+              <option value="Avellaneda, Buenos Aires, Argentina">Avellaneda</option>
+              <option value="Quilmes, Buenos Aires, Argentina">Quilmes</option>
+              <option value="La Matanza, Buenos Aires, Argentina">La Matanza</option>
+            </optgroup>
+            <optgroup label="──"><option value="__custom__">✏ Escribir manualmente...</option></optgroup>
+          </select>
+        </div>
+        <div class="fg" id="zona-manual-wrap" style="display:none">
+          <input class="fi" id="sc-zona-custom" placeholder="Ej: Belgrano, CABA, Argentina" oninput="document.getElementById('sc-zona').value=this.value">
+        </div>
+        <input type="hidden" id="sc-zona" value="CABA, Argentina">
+
+        <div class="fg">
+          <label class="flbl">Tipo de búsqueda</label>
+          <select class="fs" id="sc-rubro">
+            <option value="inmobiliaria">Inmobiliarias</option>
+            <option value="inmobiliaria alquiler">Inmobiliarias - Alquiler</option>
+            <option value="inmobiliaria venta propiedades">Inmobiliarias - Venta</option>
+            <option value="desarrolladora inmobiliaria">Desarrolladoras</option>
+          </select>
+        </div>
+
+        <button class="btn btn-p" style="width:100%" onclick="runMapsScraper()">🌐 Buscar en Google Maps</button>
+      </div>
+
+      <div class="card" id="scraper-results-wrap" style="display:none">
+        <div class="card-title">Resultados <span id="sc-count" style="color:var(--text3);font-weight:400"></span></div>
+        <div style="margin-bottom:10px;display:flex;gap:8px">
+          <button class="btn btn-p" onclick="importarTodosResultados()">✓ Importar todos a la base</button>
+          <button class="btn btn-g" onclick="document.getElementById('scraper-results-wrap').style.display='none'">Cerrar</button>
+        </div>
+        <div id="scraper-results"></div>
+      </div>
+    </div>
+
+    <!-- WEB SCRAPER ZONAPROP/ARGENPROP -->
+    <div class="panel" id="panel-webscrap">
+      <div class="pg-title">ZonaProp / Argenprop</div>
+      <div class="pg-sub">Identifica inmobiliarias publicando en los portales más grandes de Argentina</div>
+
+      <div class="card" style="max-width:560px">
+        <div class="fg">
+          <label class="flbl">Portal</label>
+          <select class="fs" id="ws-portal">
+            <option value="zonaprop">ZonaProp</option>
+            <option value="argenprop">Argenprop</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="flbl">Zona (CABA/GBA)</label>
+          <input class="fi" id="ws-zona" placeholder="Ej: almagro, villa-crespo, palermo" value="almagro">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Usá el slug del barrio tal como aparece en la URL del portal (minúsculas, con guiones)</div>
+        </div>
+        <button class="btn btn-p" style="width:100%" onclick="runWebScraper()">🔗 Buscar inmobiliarias en el portal</button>
+        <div style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.6">
+          ⚠ Este scraper lee la página pública de listados y extrae el nombre de la inmobiliaria publicante. No accede a datos privados ni hace login. Si el portal cambia su estructura, puede requerir ajuste.
+        </div>
+      </div>
+
+      <div class="card" id="ws-results-wrap" style="display:none">
+        <div class="card-title">Inmobiliarias detectadas <span id="ws-count" style="color:var(--text3);font-weight:400"></span></div>
+        <div style="margin-bottom:10px;display:flex;gap:8px">
+          <button class="btn btn-p" onclick="importarTodosWebResultados()">✓ Importar todas a la base</button>
+          <button class="btn btn-g" onclick="document.getElementById('ws-results-wrap').style.display='none'">Cerrar</button>
+        </div>
+        <div id="ws-results"></div>
+      </div>
+    </div>
+
+    <!-- COLA DE CONTACTO -->
+    <div class="panel" id="panel-cola">
+      <div class="pg-title">Cola de Contacto</div>
+      <div class="pg-sub">Contactá inmobiliarias desde tu WhatsApp personal con el mensaje de G&amp;P ya armado</div>
+
+      <div class="stats" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat"><div class="stat-lbl">En cola</div><div class="stat-val" id="cola-total">0</div></div>
+        <div class="stat"><div class="stat-lbl">Contactadas hoy</div><div class="stat-val" id="cola-hoy">0</div></div>
+        <div class="stat"><div class="stat-lbl">Respondieron</div><div class="stat-val" id="cola-resp">0</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">✉ Mensaje de contacto (G&amp;P)</div>
+        <div class="fg">
+          <label class="flbl">Plantilla — usá {{nombre}} para insertar el nombre de la inmobiliaria</label>
+          <textarea class="fta" id="msg-template" style="min-height:100px">Hola, soy Alex de G&P Negocios Inmobiliarios. Vi que {{nombre}} tiene buena presencia en la zona y quería contarles sobre nuestro marketplace inmobiliario — sumamos propiedades de inmobiliarias asociadas para darles más visibilidad y leads. ¿Tenés 5 minutos para que te cuente cómo funciona?</textarea>
+        </div>
+        <button class="btn btn-g" onclick="guardarTemplate()">💾 Guardar plantilla</button>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:14px;font-weight:600">Inmobiliarias para contactar</div>
+        <input class="srch" id="cola-search" placeholder="Buscar..." oninput="renderCola()" style="width:200px">
+      </div>
+      <div id="cola-list"></div>
+    </div>
+
+    <!-- CONFIG -->
+    <div class="panel" id="panel-config">
+      <div class="pg-title">Configuración</div>
+      <div class="pg-sub">Las API Keys se comparten con el CRM de NIVIKO si ya las cargaste ahí</div>
+
+      <div class="card" style="max-width:560px">
+        <div class="card-title">🌐 Google Maps API</div>
+        <div class="fg"><label class="flbl">API Key</label><input class="fi" type="password" id="cfg-maps" placeholder="AIza..." oninput="saveConfig()"></div>
+        <div style="font-size:11px;color:var(--text3)">Si ya cargaste la Maps API Key en el CRM de NIVIKO, se toma automáticamente — no hace falta repetirla acá. Solo completá este campo si querés usar una key distinta.</div>
+      </div>
+
+      <div class="card" style="max-width:560px">
+        <div class="card-title">🔥 Firebase (opcional — guarda en la nube)</div>
+        <div class="fg"><label class="flbl">Config JSON</label><textarea class="fta" id="cfg-firebase" placeholder='{"apiKey":"...","projectId":"...","databaseURL":"..."}' oninput="saveConfig()"></textarea></div>
+        <div style="font-size:11px;color:var(--text3)">Si no configurás Firebase, la base se guarda solo en este navegador (localStorage).</div>
+      </div>
+
+      <div class="card" style="max-width:560px">
+        <div class="card-title">👤 Tu nombre de contacto</div>
+        <div class="fg"><label class="flbl">Nombre que aparece en los mensajes</label><input class="fi" id="cfg-nombre-contacto" value="Alex" oninput="saveConfig()"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL DETALLE -->
+<div class="modal-overlay" id="modal-detalle">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// ESTADO Y STORAGE
+// ═══════════════════════════════════════════════
+let ST = { cfg:{}, panel:'dashboard' };
+let fStatus = 'all';
+let scraperResults = [];
+let webResults = [];
+
+function loadCfg(){
+  try { ST.cfg = JSON.parse(localStorage.getItem('gp_inmo_cfg')||'{}'); } catch(e){ ST.cfg = {}; }
+
+  // Si no hay Maps Key propia, tomarla del CRM de NIVIKO (misma cuenta de Google)
+  if(!ST.cfg['cfg-maps']){
+    try{
+      var nivikoCfg = JSON.parse(localStorage.getItem('crm_cfg')||'{}');
+      if(nivikoCfg['cfg-maps']){
+        ST.cfg['cfg-maps'] = nivikoCfg['cfg-maps'];
+      }
+    }catch(e){ /* silent */ }
+  }
+
+  Object.keys(ST.cfg).forEach(function(k){
+    var el = document.getElementById(k);
+    if(el) el.value = ST.cfg[k];
+  });
+  updateApiDots();
+}
+function saveConfig(){
+  ['cfg-maps','cfg-firebase','cfg-nombre-contacto'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) ST.cfg[id] = el.value;
+  });
+  localStorage.setItem('gp_inmo_cfg', JSON.stringify(ST.cfg));
+  updateApiDots();
+}
+function updateApiDots(){
+  var dm = document.getElementById('dot-maps');
+  var df = document.getElementById('dot-firebase');
+  if(dm) dm.className = 'sd ' + (ST.cfg['cfg-maps'] ? 'ok' : 'warn');
+  if(df) df.className = 'sd ' + (ST.cfg['cfg-firebase'] ? 'ok' : 'warn');
+}
+
+function getP(){
+  try { return JSON.parse(localStorage.getItem('gp_inmo_data')||'[]'); } catch(e){ return []; }
+}
+function saveP(data){
+  localStorage.setItem('gp_inmo_data', JSON.stringify(data));
+  // Firebase sync (best-effort, no bloquea)
+  syncFirebase(data);
+}
+async function syncFirebase(data){
+  var cfg = ST.cfg['cfg-firebase'];
+  if(!cfg) return;
+  try{
+    var fbCfg = JSON.parse(cfg);
+    var url = 'https://'+fbCfg.projectId+'-default-rtdb.firebaseio.com/inmobiliarias.json';
+    await fetch(url, { method:'PUT', body: JSON.stringify(data) });
+  }catch(e){ /* silent */ }
+}
+
+function toast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3200);
+}
+
+// ═══════════════════════════════════════════════
+// NAVEGACIÓN
+// ═══════════════════════════════════════════════
+function showPanel(n){
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(b){ b.classList.toggle('active', b.dataset.p===n); });
+  var panel = document.getElementById('panel-'+n);
+  if(panel) panel.classList.add('active');
+  ST.panel = n;
+  if(n==='dashboard') renderDash();
+  if(n==='prospectos') renderP();
+  if(n==='cola') initCola();
+}
+
+// ═══════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════
+function renderDash(){
+  var ps = getP();
+  document.getElementById('s-total').textContent = ps.length;
+  document.getElementById('s-cont').textContent = ps.filter(function(p){return p.estado==='contactado';}).length;
+  document.getElementById('s-int').textContent = ps.filter(function(p){return p.estado==='interesado';}).length;
+  document.getElementById('s-wa').textContent = ps.filter(function(p){return p.tel && p.tel.length>6;}).length;
+
+  var recent = ps.slice(-8).reverse();
+  var el = document.getElementById('dash-recent');
+  if(!recent.length){
+    el.innerHTML = '<span style="color:var(--text3)">Sin inmobiliarias cargadas aún. Empezá con el scraper.</span>';
+  } else {
+    el.innerHTML = recent.map(function(p){
+      return '<div style="padding:6px 0;border-bottom:1px solid var(--border)">'+p.nombre+' <span style="color:var(--text3)">· '+(p.zona||'')+'</span></div>';
+    }).join('');
+  }
+}
+
+// ═══════════════════════════════════════════════
+// PROSPECTOS (TABLA)
+// ═══════════════════════════════════════════════
+function setF(el, v){
+  fStatus = v;
+  document.querySelectorAll('.fbtn[data-f]').forEach(function(b){ b.classList.toggle('active', b.dataset.f===v); });
+  renderP();
+}
+
+function renderP(){
+  var srch = (document.getElementById('srchInput')?.value||'').toLowerCase();
+  var ps = getP().filter(function(p){
+    var ms = fStatus==='all' || p.estado===fStatus;
+    var mq = !srch || (p.nombre||'').toLowerCase().includes(srch) || (p.zona||'').toLowerCase().includes(srch);
+    return ms && mq;
+  });
+  var b = document.getElementById('pBody');
+  if(!b) return;
+  if(!ps.length){
+    b.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text3)">No hay inmobiliarias con ese filtro.</div>';
+    return;
+  }
+  b.innerHTML = ps.map(pRow).join('');
+}
+
+function pRow(p){
+  var estLabel = {nuevo:'Nueva', contactado:'Contactada', interesado:'Interesada', no_interesa:'No interesa'}[p.estado] || 'Nueva';
+  return '<div class="tbl-row" onclick="showDetalle('+p.id+')">'+
+    '<div><strong>'+p.nombre+'</strong></div>'+
+    '<div style="color:var(--text2);font-size:12px">'+(p.zona||'—')+'</div>'+
+    '<div style="color:var(--text2);font-size:12px">'+(p.tel||'—')+'</div>'+
+    '<div style="color:var(--text3);font-size:11px">'+(p.fuente||'Manual')+'</div>'+
+    '<div><span class="pill s-'+(p.estado||'nuevo')+'">'+estLabel+'</span></div>'+
+    '<div>'+(p.web?'<a href="'+p.web+'" target="_blank" onclick="event.stopPropagation()" style="color:var(--accent-b);font-size:11px">🔗 Web</a>':'')+'</div>'+
+  '</div>';
+}
+
+function showDetalle(id){
+  var ps = getP();
+  var p = ps.find(function(x){ return x.id===id; });
+  if(!p) return;
+  var html = '<h3 style="margin-bottom:14px">'+p.nombre+'</h3>';
+  html += '<div class="grid2" style="margin-bottom:14px">';
+  html += '<div class="fg"><label class="flbl">Teléfono</label><input class="fi" id="md-tel" value="'+(p.tel||'')+'"></div>';
+  html += '<div class="fg"><label class="flbl">Email</label><input class="fi" id="md-email" value="'+(p.email||'')+'"></div>';
+  html += '<div class="fg"><label class="flbl">Zona</label><input class="fi" id="md-zona" value="'+(p.zona||'')+'"></div>';
+  html += '<div class="fg"><label class="flbl">Web</label><input class="fi" id="md-web" value="'+(p.web||'')+'"></div>';
+  html += '</div>';
+  html += '<div class="fg"><label class="flbl">Estado</label><select class="fs" id="md-estado">';
+  ['nuevo','contactado','interesado','no_interesa'].forEach(function(e){
+    html += '<option value="'+e+'" '+(p.estado===e?'selected':'')+'>'+e+'</option>';
+  });
+  html += '</select></div>';
+  html += '<div class="fg"><label class="flbl">Notas</label><textarea class="fta" id="md-notas">'+(p.notas||'')+'</textarea></div>';
+  html += '<div style="display:flex;gap:8px;margin-top:14px">';
+  html += '<button class="btn btn-p" onclick="guardarDetalle('+id+')">💾 Guardar</button>';
+  if(p.tel) html += '<button class="btn btn-g" style="background:rgba(37,211,102,.12);border-color:#25d366;color:#25d366" onclick="contactarDesdeDetalle('+id+')">📲 Contactar por WA</button>';
+  html += '<button class="btn btn-g" style="color:var(--red)" onclick="eliminarProspecto('+id+')">🗑 Eliminar</button>';
+  html += '</div>';
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-detalle').classList.add('show');
+}
+
+function guardarDetalle(id){
+  var ps = getP();
+  var idx = ps.findIndex(function(x){ return x.id===id; });
+  if(idx===-1) return;
+  ps[idx].tel = document.getElementById('md-tel').value;
+  ps[idx].email = document.getElementById('md-email').value;
+  ps[idx].zona = document.getElementById('md-zona').value;
+  ps[idx].web = document.getElementById('md-web').value;
+  ps[idx].estado = document.getElementById('md-estado').value;
+  ps[idx].notas = document.getElementById('md-notas').value;
+  saveP(ps);
+  closeModal();
+  renderP(); renderDash();
+  toast('✅ Guardado');
+}
+
+function eliminarProspecto(id){
+  if(!confirm('¿Eliminar esta inmobiliaria de la base?')) return;
+  var ps = getP().filter(function(x){ return x.id!==id; });
+  saveP(ps);
+  closeModal();
+  renderP(); renderDash();
+  toast('🗑 Eliminada');
+}
+
+function contactarDesdeDetalle(id){
+  var ps = getP();
+  var p = ps.find(function(x){ return x.id===id; });
+  if(!p || !p.tel) return;
+  enviarMensajeWA(p);
+}
+
+function closeModal(){ document.getElementById('modal-detalle').classList.remove('show'); }
+
+function exportCSV(){
+  var ps = getP();
+  if(!ps.length){ toast('No hay datos para exportar'); return; }
+  var headers = ['Nombre','Zona','Telefono','Email','Web','Estado','Fuente','Notas'];
+  var rows = [headers.join(',')];
+  ps.forEach(function(p){
+    rows.push([p.nombre,p.zona,p.tel,p.email,p.web,p.estado,p.fuente,p.notas].map(function(v){
+      return '"'+String(v||'').replace(/"/g,'""')+'"';
+    }).join(','));
+  });
+  var blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'inmobiliarias_gp.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════
+// SCRAPER GOOGLE MAPS
+// ═══════════════════════════════════════════════
+function onZonaChange(sel){
+  var wrap = document.getElementById('zona-manual-wrap');
+  if(sel.value === '__custom__'){
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+    document.getElementById('sc-zona').value = sel.value;
+  }
+}
+
+async function runMapsScraper(){
+  var mapsKey = ST.cfg['cfg-maps'];
+  if(!mapsKey){ toast('⚠ Configurá tu Google Maps API Key en Configuración'); showPanel('config'); return; }
+  var zona = document.getElementById('sc-zona').value;
+  var rubro = document.getElementById('sc-rubro').value;
+  toast('🔍 Buscando '+rubro+' en '+zona+'...');
+
+  try{
+    var url = '/api/maps?query='+encodeURIComponent(rubro+' '+zona)+'&key='+mapsKey;
+    var r = await fetch(url);
+    var data = await r.json();
+    if(!data.results || !data.results.length){
+      toast('Sin resultados para esa búsqueda');
+      return;
+    }
+    scraperResults = data.results.map(function(res){
+      return {
+        nombre: res.name || res.nombre,
+        zona: zona,
+        tel: res.tel || res.phone || '',
+        web: res.website || '',
+        rating: res.rating || '',
+        direccion: res.address || res.formatted_address || '',
+        place_id: res.place_id || ''
+      };
+    });
+    renderScraperResults();
+    toast('✅ '+scraperResults.length+' inmobiliarias encontradas');
+  }catch(e){
+    toast('⚠ Error al buscar: '+e.message);
+  }
+}
+
+function renderScraperResults(){
+  var wrap = document.getElementById('scraper-results-wrap');
+  var el = document.getElementById('scraper-results');
+  document.getElementById('sc-count').textContent = '('+scraperResults.length+')';
+  wrap.style.display = 'block';
+  el.innerHTML = scraperResults.map(function(r, i){
+    return '<div style="padding:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+      '<div><strong style="font-size:13px">'+r.nombre+'</strong><div style="font-size:11px;color:var(--text3)">'+(r.direccion||r.zona)+(r.tel?' · '+r.tel:'')+'</div></div>'+
+      '<button class="btn btn-g" style="font-size:11px" onclick="importarUnResultado('+i+')">+ Agregar</button>'+
+    '</div>';
+  }).join('');
+}
+
+function importarUnResultado(i){
+  var r = scraperResults[i];
+  agregarProspecto(r.nombre, r.zona, r.tel, '', r.web, 'Google Maps');
+  toast('✅ '+r.nombre+' agregada');
+}
+
+function importarTodosResultados(){
+  if(!scraperResults.length) return;
+  if(!confirm('¿Importar las '+scraperResults.length+' inmobiliarias encontradas a la base?')) return;
+  var ps = getP();
+  var existentes = new Set(ps.map(function(p){ return p.nombre.toLowerCase().trim(); }));
+  var agregadas = 0;
+  scraperResults.forEach(function(r){
+    var key = r.nombre.toLowerCase().trim();
+    if(existentes.has(key)) return;
+    ps.push({
+      id: Date.now()+Math.random(),
+      nombre: r.nombre, zona: r.zona, tel: r.tel||'', email:'', web: r.web||'',
+      estado:'nuevo', fuente:'Google Maps', notas:'', created: Date.now()
+    });
+    existentes.add(key);
+    agregadas++;
+  });
+  saveP(ps);
+  toast('✅ '+agregadas+' inmobiliarias nuevas agregadas a la base');
+  document.getElementById('scraper-results-wrap').style.display='none';
+}
+
+function agregarProspecto(nombre, zona, tel, email, web, fuente){
+  var ps = getP();
+  if(ps.some(function(p){ return p.nombre.toLowerCase().trim()===nombre.toLowerCase().trim(); })) {
+    toast('⚠ Ya existe en la base');
+    return;
+  }
+  ps.push({
+    id: Date.now()+Math.random(),
+    nombre: nombre, zona: zona||'', tel: tel||'', email: email||'', web: web||'',
+    estado:'nuevo', fuente: fuente||'Manual', notas:'', created: Date.now()
+  });
+  saveP(ps);
+}
+
+// ═══════════════════════════════════════════════
+// WEB SCRAPER ZONAPROP / ARGENPROP
+// ═══════════════════════════════════════════════
+async function runWebScraper(){
+  var portal = document.getElementById('ws-portal').value;
+  var zona = document.getElementById('ws-zona').value.trim().toLowerCase().replace(/\s+/g,'-');
+  if(!zona){ toast('Escribí una zona'); return; }
+
+  var url = portal === 'zonaprop'
+    ? 'https://www.zonaprop.com.ar/inmuebles-' + zona + '.html'
+    : 'https://www.argenprop.com/inmuebles/' + zona;
+
+  toast('🔍 Buscando en '+portal+'...');
+
+  try{
+    // Usa el mismo proxy de maps con modo "fetch" genérico si está disponible,
+    // sino intenta fetch directo (puede fallar por CORS según el navegador)
+    var proxyUrl = '/api/maps?fetchUrl='+encodeURIComponent(url);
+    var r = await fetch(proxyUrl);
+    if(!r.ok) throw new Error('proxy no disponible');
+    var data = await r.json();
+    var html = data.html || '';
+    var nombres = extraerInmobiliariasDeHTML(html, portal);
+
+    if(!nombres.length){
+      toast('⚠ No se detectaron inmobiliarias. El portal puede haber cambiado su estructura.');
+      return;
+    }
+
+    webResults = nombres.map(function(n){ return { nombre: n, zona: zona, fuente: portal === 'zonaprop' ? 'ZonaProp' : 'Argenprop' }; });
+    renderWebResults();
+    toast('✅ '+webResults.length+' inmobiliarias detectadas');
+  }catch(e){
+    toast('⚠ No se pudo acceder al portal desde acá. Probá copiar el HTML manualmente o usar el scraper de Maps.');
+  }
+}
+
+function extraerInmobiliariasDeHTML(html, portal){
+  var nombres = new Set();
+  // Patrones genéricos — los portales suelen tener el nombre de la inmobiliaria
+  // en atributos data- o clases tipo "publisher", "inmobiliaria", "agency"
+  var patterns = [
+    /data-qa="POSTING_CARD_PUBLISHER"[^>]*>([^<]+)</gi,
+    /class="[^"]*publisher[^"]*"[^>]*>([^<]+)</gi,
+    /class="[^"]*inmobiliaria[^"]*"[^>]*>([^<]+)</gi,
+    /class="[^"]*agency-name[^"]*"[^>]*>([^<]+)</gi,
+  ];
+  patterns.forEach(function(pat){
+    var m;
+    while((m = pat.exec(html)) !== null){
+      var nombre = m[1].trim();
+      if(nombre.length > 2 && nombre.length < 80) nombres.add(nombre);
+    }
+  });
+  return Array.from(nombres);
+}
+
+function renderWebResults(){
+  var wrap = document.getElementById('ws-results-wrap');
+  var el = document.getElementById('ws-results');
+  document.getElementById('ws-count').textContent = '('+webResults.length+')';
+  wrap.style.display = 'block';
+  el.innerHTML = webResults.map(function(r, i){
+    return '<div style="padding:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+      '<div><strong style="font-size:13px">'+r.nombre+'</strong><div style="font-size:11px;color:var(--text3)">'+r.zona+' · '+r.fuente+'</div></div>'+
+      '<button class="btn btn-g" style="font-size:11px" onclick="importarUnWebResultado('+i+')">+ Agregar</button>'+
+    '</div>';
+  }).join('');
+}
+
+function importarUnWebResultado(i){
+  var r = webResults[i];
+  agregarProspecto(r.nombre, r.zona, '', '', '', r.fuente);
+  toast('✅ '+r.nombre+' agregada');
+}
+
+function importarTodosWebResultados(){
+  if(!webResults.length) return;
+  var ps = getP();
+  var existentes = new Set(ps.map(function(p){ return p.nombre.toLowerCase().trim(); }));
+  var agregadas = 0;
+  webResults.forEach(function(r){
+    var key = r.nombre.toLowerCase().trim();
+    if(existentes.has(key)) return;
+    ps.push({
+      id: Date.now()+Math.random(),
+      nombre: r.nombre, zona: r.zona, tel:'', email:'', web:'',
+      estado:'nuevo', fuente: r.fuente, notas:'', created: Date.now()
+    });
+    existentes.add(key);
+    agregadas++;
+  });
+  saveP(ps);
+  toast('✅ '+agregadas+' inmobiliarias nuevas agregadas');
+  document.getElementById('ws-results-wrap').style.display='none';
+}
+
+// ═══════════════════════════════════════════════
+// COLA DE CONTACTO MANUAL
+// ═══════════════════════════════════════════════
+function guardarTemplate(){
+  localStorage.setItem('gp_inmo_template', document.getElementById('msg-template').value);
+  toast('💾 Plantilla guardada');
+}
+function cargarTemplate(){
+  var t = localStorage.getItem('gp_inmo_template');
+  if(t) document.getElementById('msg-template').value = t;
+}
+
+function getColaHoy(){
+  try{
+    var d = JSON.parse(localStorage.getItem('gp_inmo_cola_hoy')||'{}');
+    if(d.fecha !== new Date().toDateString()) return { fecha:new Date().toDateString(), enviados:[], respondieron:0 };
+    return d;
+  }catch(e){ return { fecha:new Date().toDateString(), enviados:[], respondieron:0 }; }
+}
+function saveColaHoy(d){ localStorage.setItem('gp_inmo_cola_hoy', JSON.stringify(d)); }
+
+function initCola(){
+  cargarTemplate();
+  renderCola();
+}
+
+function renderCola(){
+  var ps = getP();
+  var search = (document.getElementById('cola-search')?.value||'').toLowerCase();
+  var hoy = getColaHoy();
+
+  var lista = ps.filter(function(p){
+    if(!p.tel || p.tel.length < 6) return false;
+    if(p.estado === 'no_interesa') return false;
+    if(hoy.enviados.includes(p.id)) return false;
+    if(search && !p.nombre.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  document.getElementById('cola-total').textContent = lista.length;
+  document.getElementById('cola-hoy').textContent = hoy.enviados.length;
+  document.getElementById('cola-resp').textContent = hoy.respondieron||0;
+
+  var el = document.getElementById('cola-list');
+  if(!lista.length){
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);background:var(--bg2);border:1px solid var(--border);border-radius:12px">No hay inmobiliarias con teléfono pendientes de contactar.</div>';
+    return;
+  }
+
+  el.innerHTML = lista.map(function(p){
+    var msg = construirMensaje(p);
+    return '<div class="card" style="margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
+        '<div><strong>'+p.nombre+'</strong><div style="font-size:11px;color:var(--text3)">'+(p.zona||'')+' · '+p.tel+'</div></div>'+
+        '<button style="background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px" onclick="noInteresaInmo('+p.id+')">✕ No interesa</button>'+
+      '</div>'+
+      '<div style="font-size:12px;color:var(--text2);background:var(--bg3);padding:8px;border-radius:6px;margin-bottom:8px">'+msg+'</div>'+
+      '<button class="btn btn-p" style="width:100%;background:#25d366;border-color:#25d366;color:#000;font-weight:600" onclick="contactarDesdeCola('+p.id+')">📲 Abrir en mi WhatsApp</button>'+
+    '</div>';
+  }).join('');
+}
+
+function construirMensaje(p){
+  var tpl = document.getElementById('msg-template')?.value || localStorage.getItem('gp_inmo_template') || '';
+  return tpl.replace(/\{\{nombre\}\}/g, p.nombre);
+}
+
+function contactarDesdeCola(id){
+  var ps = getP();
+  var p = ps.find(function(x){ return x.id===id; });
+  if(!p) return;
+  enviarMensajeWA(p);
+}
+
+function enviarMensajeWA(p){
+  var msg = construirMensaje(p);
+  var tel = p.tel.replace(/[^0-9]/g,'');
+  if(tel.length < 8){ toast('Número inválido'); return; }
+  window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msg), '_blank');
+
+  var hoy = getColaHoy();
+  hoy.enviados.push(p.id);
+  saveColaHoy(hoy);
+
+  var ps = getP();
+  var idx = ps.findIndex(function(x){ return x.id===p.id; });
+  if(idx !== -1){
+    ps[idx].estado = ps[idx].estado === 'nuevo' ? 'contactado' : ps[idx].estado;
+    ps[idx].lastContact = new Date().toISOString();
+    saveP(ps);
+  }
+  renderCola();
+  toast('✅ WhatsApp abierto. Revisá y enviá desde tu teléfono.');
+}
+
+function noInteresaInmo(id){
+  var ps = getP();
+  var idx = ps.findIndex(function(x){ return x.id===id; });
+  if(idx===-1) return;
+  ps[idx].estado = 'no_interesa';
+  saveP(ps);
+  renderCola();
+  toast('✕ Marcada como No interesa');
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function(){
+  loadCfg();
+  renderDash();
+  renderP();
+});
+</script>
+</body>
+</html>
