@@ -78,6 +78,19 @@
 </style>
 </head>
 <body>
+<!-- LOGIN VENDEDOR -->
+<div id="vendedor-login" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;align-items:center;justify-content:center">
+  <div style="text-align:center;max-width:340px;width:90%;padding:36px 30px;background:var(--bg2);border:1px solid var(--border);border-radius:18px">
+    <div style="font-size:32px;margin-bottom:14px">🏢</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:4px">G&amp;P Prospección</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:26px">¿Quién sos?</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button onclick="elegirVendedor('v1')" style="padding:16px;border-radius:10px;border:2px solid var(--accent);background:rgba(99,102,241,.1);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">👤 Vendedor 1</button>
+      <button onclick="elegirVendedor('v2')" style="padding:16px;border-radius:10px;border:2px solid var(--orange);background:rgba(245,158,11,.1);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">👤 Vendedor 2</button>
+    </div>
+  </div>
+</div>
+
 <div class="app">
 
   <!-- SIDEBAR -->
@@ -104,6 +117,11 @@
       <div class="api-row"><span class="sd" id="dot-maps"></span>Google Maps</div>
       <div class="api-row"><span class="sd" id="dot-firebase"></span>Firebase</div>
     </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Vendedor activo</div>
+      <div id="vendedor-badge" style="font-size:13px;font-weight:600;margin-bottom:6px">—</div>
+      <button class="btn btn-g" style="font-size:11px;padding:5px 10px;width:100%" onclick="cambiarVendedor()">↺ Cambiar vendedor</button>
+    </div>
   </div>
 
   <!-- CONTENT -->
@@ -128,6 +146,7 @@
             <button class="btn btn-p" onclick="showPanel('scraper')">🌐 Buscar en Google Maps</button>
             <button class="btn btn-g" onclick="showPanel('webscrap')">🔗 Buscar en ZonaProp/Argenprop</button>
             <button class="btn btn-g" onclick="showPanel('cola')">📲 Ir a Cola de Contacto</button>
+            <button class="btn btn-g" style="background:rgba(99,102,241,.12);border-color:var(--accent)" onclick="enriquecerBaseCompleta()">🔍 Enriquecer base completa</button>
           </div>
         </div>
         <div class="card">
@@ -151,9 +170,20 @@
         <button class="fbtn" data-f="no_interesa" onclick="setF(this,'no_interesa')">No interesa</button>
         <button class="btn btn-g" style="margin-left:auto;font-size:12px" onclick="exportCSV()">⬇ Exportar CSV</button>
       </div>
+      <div class="filters" style="margin-top:-6px">
+        <span style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px">Tipo:</span>
+        <button class="fbtn active" data-t="all" onclick="setT(this,'all')">Todos</button>
+        <button class="fbtn" data-t="inmobiliaria" onclick="setT(this,'inmobiliaria')">🏠 Inmobiliarias</button>
+        <button class="fbtn" data-t="desarrolladora" onclick="setT(this,'desarrolladora')">🏗 Desarrolladoras</button>
+        <select class="fs" id="f-vendedor" style="font-size:11px;padding:6px 10px;width:auto;margin-left:8px" onchange="renderP()">
+          <option value="">Todos los vendedores</option>
+          <option value="v1">Vendedor 1</option>
+          <option value="v2">Vendedor 2</option>
+        </select>
+      </div>
 
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden">
-        <div class="tbl-hdr"><div>Inmobiliaria</div><div>Zona</div><div>Teléfono</div><div>Fuente</div><div>Estado</div><div>Acciones</div></div>
+        <div class="tbl-hdr"><div>Inmobiliaria</div><div>Tipo</div><div>Zona</div><div>Teléfono</div><div>Estado</div><div>Acciones</div></div>
         <div id="pBody"></div>
       </div>
     </div>
@@ -204,6 +234,13 @@
             <option value="inmobiliaria alquiler">Inmobiliarias - Alquiler</option>
             <option value="inmobiliaria venta propiedades">Inmobiliarias - Venta</option>
             <option value="desarrolladora inmobiliaria">Desarrolladoras</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="flbl">Clasificar resultados como</label>
+          <select class="fs" id="sc-tipo-resultado">
+            <option value="inmobiliaria">🏠 Inmobiliaria</option>
+            <option value="desarrolladora">🏗 Desarrolladora</option>
           </select>
         </div>
 
@@ -321,8 +358,9 @@
 // ═══════════════════════════════════════════════
 // ESTADO Y STORAGE
 // ═══════════════════════════════════════════════
-let ST = { cfg:{}, panel:'dashboard' };
+let ST = { cfg:{}, panel:'dashboard', vendedor:null };
 let fStatus = 'all';
+let fType = 'all';
 let scraperResults = [];
 let webResults = [];
 
@@ -427,18 +465,26 @@ function setF(el, v){
   document.querySelectorAll('.fbtn[data-f]').forEach(function(b){ b.classList.toggle('active', b.dataset.f===v); });
   renderP();
 }
+function setT(el, v){
+  fType = v;
+  document.querySelectorAll('.fbtn[data-t]').forEach(function(b){ b.classList.toggle('active', b.dataset.t===v); });
+  renderP();
+}
 
 function renderP(){
   var srch = (document.getElementById('srchInput')?.value||'').toLowerCase();
+  var fVend = document.getElementById('f-vendedor')?.value || '';
   var ps = getP().filter(function(p){
     var ms = fStatus==='all' || p.estado===fStatus;
+    var mt = fType==='all' || (p.tipo||'inmobiliaria')===fType;
+    var mv = !fVend || p.vendedor===fVend;
     var mq = !srch || (p.nombre||'').toLowerCase().includes(srch) || (p.zona||'').toLowerCase().includes(srch);
-    return ms && mq;
+    return ms && mt && mv && mq;
   });
   var b = document.getElementById('pBody');
   if(!b) return;
   if(!ps.length){
-    b.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text3)">No hay inmobiliarias con ese filtro.</div>';
+    b.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text3)">No hay resultados con ese filtro.</div>';
     return;
   }
   b.innerHTML = ps.map(pRow).join('');
@@ -446,11 +492,13 @@ function renderP(){
 
 function pRow(p){
   var estLabel = {nuevo:'Nueva', contactado:'Contactada', interesado:'Interesada', no_interesa:'No interesa'}[p.estado] || 'Nueva';
+  var tipoLabel = p.tipo === 'desarrolladora' ? '🏗 Desarrolladora' : '🏠 Inmobiliaria';
+  var vendBadge = p.vendedor ? '<span style="font-size:9px;color:'+(p.vendedor==='v1'?'var(--accent-b)':'var(--orange)')+';border:1px solid currentColor;border-radius:8px;padding:1px 6px;margin-left:6px">'+(p.vendedor==='v1'?'V1':'V2')+'</span>' : '';
   return '<div class="tbl-row" onclick="showDetalle('+p.id+')">'+
-    '<div><strong>'+p.nombre+'</strong></div>'+
+    '<div><strong>'+p.nombre+'</strong>'+vendBadge+'</div>'+
+    '<div style="color:var(--text2);font-size:12px">'+tipoLabel+'</div>'+
     '<div style="color:var(--text2);font-size:12px">'+(p.zona||'—')+'</div>'+
     '<div style="color:var(--text2);font-size:12px">'+(p.tel||'—')+'</div>'+
-    '<div style="color:var(--text3);font-size:11px">'+(p.fuente||'Manual')+'</div>'+
     '<div><span class="pill s-'+(p.estado||'nuevo')+'">'+estLabel+'</span></div>'+
     '<div>'+(p.web?'<a href="'+p.web+'" target="_blank" onclick="event.stopPropagation()" style="color:var(--accent-b);font-size:11px">🔗 Web</a>':'')+'</div>'+
   '</div>';
@@ -460,6 +508,7 @@ function showDetalle(id){
   var ps = getP();
   var p = ps.find(function(x){ return x.id===id; });
   if(!p) return;
+  currentHistId = id;
   var html = '<h3 style="margin-bottom:14px">'+p.nombre+'</h3>';
   html += '<div class="grid2" style="margin-bottom:14px">';
   html += '<div class="fg"><label class="flbl">Teléfono</label><input class="fi" id="md-tel" value="'+(p.tel||'')+'"></div>';
@@ -467,19 +516,75 @@ function showDetalle(id){
   html += '<div class="fg"><label class="flbl">Zona</label><input class="fi" id="md-zona" value="'+(p.zona||'')+'"></div>';
   html += '<div class="fg"><label class="flbl">Web</label><input class="fi" id="md-web" value="'+(p.web||'')+'"></div>';
   html += '</div>';
+  html += '<div class="grid2" style="margin-bottom:14px">';
+  html += '<div class="fg"><label class="flbl">Tipo</label><select class="fs" id="md-tipo">';
+  html += '<option value="inmobiliaria" '+((p.tipo||'inmobiliaria')==='inmobiliaria'?'selected':'')+'>🏠 Inmobiliaria</option>';
+  html += '<option value="desarrolladora" '+(p.tipo==='desarrolladora'?'selected':'')+'>🏗 Desarrolladora</option>';
+  html += '</select></div>';
   html += '<div class="fg"><label class="flbl">Estado</label><select class="fs" id="md-estado">';
   ['nuevo','contactado','interesado','no_interesa'].forEach(function(e){
     html += '<option value="'+e+'" '+(p.estado===e?'selected':'')+'>'+e+'</option>';
   });
   html += '</select></div>';
+  html += '</div>';
   html += '<div class="fg"><label class="flbl">Notas</label><textarea class="fta" id="md-notas">'+(p.notas||'')+'</textarea></div>';
-  html += '<div style="display:flex;gap:8px;margin-top:14px">';
+
+  html += '<div class="fg" style="margin-top:16px"><label class="flbl">Historial de actividad</label>';
+  html += '<div style="display:flex;gap:6px;margin-bottom:8px">';
+  html += '<select id="hist-tipo" class="fs" style="font-size:11px;padding:5px 8px;width:130px;flex-shrink:0">';
+  html += '<option value="llamada">📞 Llamada</option><option value="whatsapp">💬 WhatsApp</option><option value="email">✉ Email</option><option value="reunion">🤝 Reunión</option><option value="nota">📝 Nota</option><option value="no_atiende">🚫 No atiende</option>';
+  html += '</select>';
+  html += '<input id="hist-texto" class="fi" placeholder="¿Qué pasó?" style="font-size:11px;flex:1">';
+  html += '<button class="btn btn-p" style="font-size:11px;padding:5px 10px" onclick="agregarHistorial()">+ Agregar</button>';
+  html += '</div>';
+  html += '<div id="hist-timeline" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;min-height:60px;max-height:160px;overflow-y:auto;font-size:12px"></div>';
+  html += '</div>';
+
+  html += '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">';
   html += '<button class="btn btn-p" onclick="guardarDetalle('+id+')">💾 Guardar</button>';
   if(p.tel) html += '<button class="btn btn-g" style="background:rgba(37,211,102,.12);border-color:#25d366;color:#25d366" onclick="contactarDesdeDetalle('+id+')">📲 Contactar por WA</button>';
+  html += '<button class="btn btn-g" onclick="enriquecerUno('+id+')">🔍 Buscar en Maps</button>';
   html += '<button class="btn btn-g" style="color:var(--red)" onclick="eliminarProspecto('+id+')">🗑 Eliminar</button>';
   html += '</div>';
   document.getElementById('modal-content').innerHTML = html;
   document.getElementById('modal-detalle').classList.add('show');
+  renderHistorial(p);
+}
+
+function renderHistorial(p){
+  var el = document.getElementById('hist-timeline');
+  if(!el) return;
+  var hist = p.historial || [];
+  if(!hist.length){ el.innerHTML = '<span style="color:var(--text3)">Sin actividad registrada aún.</span>'; return; }
+  var iconos = { llamada:'📞', whatsapp:'💬', email:'✉', reunion:'🤝', nota:'📝', no_atiende:'🚫' };
+  el.innerHTML = hist.slice().reverse().map(function(h){
+    var f = new Date(h.fecha);
+    var fStr = f.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) + ' ' + f.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+    return '<div style="padding:5px 0;border-bottom:1px solid var(--border);display:flex;gap:7px">'+
+      '<span>'+(iconos[h.tipo]||'📝')+'</span>'+
+      '<div style="flex:1"><span style="color:var(--text2)">'+h.texto+'</span>'+
+      '<div style="font-size:10px;color:var(--text3)">'+fStr+(h.vendedor?' · '+(h.vendedor==='v1'?'V1':'V2'):'')+'</div></div>'+
+    '</div>';
+  }).join('');
+}
+
+var currentHistId = null;
+
+function agregarHistorial(){
+  var tipo = document.getElementById('hist-tipo')?.value || 'nota';
+  var texto = document.getElementById('hist-texto')?.value.trim() || '';
+  if(!texto){ toast('Escribí qué pasó'); return; }
+  if(!currentHistId) return;
+  var ps = getP();
+  var idx = ps.findIndex(function(x){ return x.id===currentHistId; });
+  if(idx===-1) return;
+  if(!ps[idx].historial) ps[idx].historial = [];
+  ps[idx].historial.push({ tipo:tipo, texto:texto, fecha:new Date().toISOString(), vendedor: ST.vendedor||'v1' });
+  ps[idx].lastContact = new Date().toISOString();
+  saveP(ps);
+  document.getElementById('hist-texto').value = '';
+  renderHistorial(ps[idx]);
+  toast('✅ Actividad registrada');
 }
 
 function guardarDetalle(id){
@@ -490,6 +595,7 @@ function guardarDetalle(id){
   ps[idx].email = document.getElementById('md-email').value;
   ps[idx].zona = document.getElementById('md-zona').value;
   ps[idx].web = document.getElementById('md-web').value;
+  ps[idx].tipo = document.getElementById('md-tipo').value;
   ps[idx].estado = document.getElementById('md-estado').value;
   ps[idx].notas = document.getElementById('md-notas').value;
   saveP(ps);
@@ -595,13 +701,15 @@ function renderScraperResults(){
 
 function importarUnResultado(i){
   var r = scraperResults[i];
-  agregarProspecto(r.nombre, r.zona, r.tel, '', r.web, 'Google Maps');
+  var tipo = document.getElementById('sc-tipo-resultado')?.value || 'inmobiliaria';
+  agregarProspecto(r.nombre, r.zona, r.tel, '', r.web, 'Google Maps', tipo);
   toast('✅ '+r.nombre+' agregada');
 }
 
 function importarTodosResultados(){
   if(!scraperResults.length) return;
   if(!confirm('¿Importar las '+scraperResults.length+' inmobiliarias encontradas a la base?')) return;
+  var tipo = document.getElementById('sc-tipo-resultado')?.value || 'inmobiliaria';
   var ps = getP();
   var existentes = new Set(ps.map(function(p){ return p.nombre.toLowerCase().trim(); }));
   var agregadas = 0;
@@ -611,6 +719,7 @@ function importarTodosResultados(){
     ps.push({
       id: Date.now()+Math.random(),
       nombre: r.nombre, zona: r.zona, tel: r.tel||'', email:'', web: r.web||'',
+      tipo: tipo,
       estado:'nuevo', fuente:'Google Maps', notas:'', created: Date.now()
     });
     existentes.add(key);
@@ -621,7 +730,7 @@ function importarTodosResultados(){
   document.getElementById('scraper-results-wrap').style.display='none';
 }
 
-function agregarProspecto(nombre, zona, tel, email, web, fuente){
+function agregarProspecto(nombre, zona, tel, email, web, fuente, tipo){
   var ps = getP();
   if(ps.some(function(p){ return p.nombre.toLowerCase().trim()===nombre.toLowerCase().trim(); })) {
     toast('⚠ Ya existe en la base');
@@ -630,6 +739,7 @@ function agregarProspecto(nombre, zona, tel, email, web, fuente){
   ps.push({
     id: Date.now()+Math.random(),
     nombre: nombre, zona: zona||'', tel: tel||'', email: email||'', web: web||'',
+    tipo: tipo||'inmobiliaria',
     estado:'nuevo', fuente: fuente||'Manual', notas:'', created: Date.now()
   });
   saveP(ps);
@@ -762,13 +872,23 @@ function renderCola(){
   var ps = getP();
   var search = (document.getElementById('cola-search')?.value||'').toLowerCase();
   var hoy = getColaHoy();
+  var miVendedor = ST.vendedor || 'v1';
 
   var lista = ps.filter(function(p){
     if(!p.tel || p.tel.length < 6) return false;
     if(p.estado === 'no_interesa') return false;
     if(hoy.enviados.includes(p.id)) return false;
     if(search && !p.nombre.toLowerCase().includes(search)) return false;
+    // Solo ve los suyos o los sin asignar
+    if(p.vendedor && p.vendedor !== miVendedor) return false;
     return true;
+  });
+
+  // Asignados a mí primero
+  lista.sort(function(a,b){
+    var aMine = a.vendedor === miVendedor ? 0 : 1;
+    var bMine = b.vendedor === miVendedor ? 0 : 1;
+    return aMine - bMine;
   });
 
   document.getElementById('cola-total').textContent = lista.length;
@@ -783,9 +903,10 @@ function renderCola(){
 
   el.innerHTML = lista.map(function(p){
     var msg = construirMensaje(p);
+    var vendBadge = p.vendedor ? '<span style="font-size:9px;color:'+(p.vendedor==='v1'?'var(--accent-b)':'var(--orange)')+';border:1px solid currentColor;border-radius:8px;padding:1px 6px;margin-left:6px">'+(p.vendedor==='v1'?'V1':'V2')+'</span>' : '';
     return '<div class="card" style="margin-bottom:10px">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
-        '<div><strong>'+p.nombre+'</strong><div style="font-size:11px;color:var(--text3)">'+(p.zona||'')+' · '+p.tel+'</div></div>'+
+        '<div><strong>'+p.nombre+'</strong>'+vendBadge+'<div style="font-size:11px;color:var(--text3)">'+(p.zona||'')+' · '+p.tel+'</div></div>'+
         '<button style="background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px" onclick="noInteresaInmo('+p.id+')">✕ No interesa</button>'+
       '</div>'+
       '<div style="font-size:12px;color:var(--text2);background:var(--bg3);padding:8px;border-radius:6px;margin-bottom:8px">'+msg+'</div>'+
@@ -821,6 +942,10 @@ function enviarMensajeWA(p){
   if(idx !== -1){
     ps[idx].estado = ps[idx].estado === 'nuevo' ? 'contactado' : ps[idx].estado;
     ps[idx].lastContact = new Date().toISOString();
+    // Asignar vendedor la primera vez — queda fijo después
+    if(!ps[idx].vendedor) ps[idx].vendedor = ST.vendedor || 'v1';
+    if(!ps[idx].historial) ps[idx].historial = [];
+    ps[idx].historial.push({ tipo:'whatsapp', texto:'Contacto inicial enviado', fecha:new Date().toISOString(), vendedor: ST.vendedor||'v1' });
     saveP(ps);
   }
   renderCola();
@@ -838,10 +963,112 @@ function noInteresaInmo(id){
 }
 
 // ═══════════════════════════════════════════════
+// LOGIN VENDEDOR
+// ═══════════════════════════════════════════════
+function initVendedorLogin(){
+  var saved = localStorage.getItem('gp_inmo_vendedor');
+  if(saved){
+    ST.vendedor = saved;
+    updateVendedorBadge();
+    return;
+  }
+  var el = document.getElementById('vendedor-login');
+  if(el) el.style.display = 'flex';
+}
+function elegirVendedor(v){
+  ST.vendedor = v;
+  localStorage.setItem('gp_inmo_vendedor', v);
+  var el = document.getElementById('vendedor-login');
+  if(el) el.style.display = 'none';
+  updateVendedorBadge();
+  toast('✅ Bienvenido, '+(v==='v1'?'Vendedor 1':'Vendedor 2'));
+}
+function updateVendedorBadge(){
+  var b = document.getElementById('vendedor-badge');
+  if(b) b.textContent = ST.vendedor === 'v2' ? '👤 Vendedor 2' : '👤 Vendedor 1';
+}
+function cambiarVendedor(){
+  localStorage.removeItem('gp_inmo_vendedor');
+  ST.vendedor = null;
+  document.getElementById('vendedor-login').style.display = 'flex';
+}
+
+// ═══════════════════════════════════════════════
+// ENRIQUECER UNO / TODOS
+// ═══════════════════════════════════════════════
+async function enriquecerUno(id){
+  var mapsKey = ST.cfg['cfg-maps'];
+  if(!mapsKey){ toast('⚠ Configurá tu Google Maps API Key'); return; }
+  var ps = getP();
+  var idx = ps.findIndex(function(x){ return x.id===id; });
+  if(idx===-1) return;
+  var p = ps[idx];
+  toast('🔍 Buscando '+p.nombre+'...');
+  try{
+    var q = p.nombre + (p.zona ? ' '+p.zona : ' CABA Argentina');
+    var url = '/api/maps?query='+encodeURIComponent(q)+'&key='+mapsKey;
+    var r = await fetch(url);
+    var data = await r.json();
+    if(data.results && data.results.length){
+      var best = data.results[0];
+      var changed = [];
+      if(!p.tel && (best.tel||best.phone)){ ps[idx].tel = best.tel||best.phone; changed.push('tel'); }
+      if(!p.web && best.website){ ps[idx].web = best.website; changed.push('web'); }
+      if(!p.zona && (best.address||best.formatted_address)){ ps[idx].zona = best.address||best.formatted_address; changed.push('zona'); }
+      saveP(ps);
+      renderP();
+      toast(changed.length ? '✅ '+p.nombre+': '+changed.join(', ') : '✅ Sin datos nuevos para '+p.nombre);
+      showDetalle(id);
+    } else {
+      toast('Sin resultados en Maps para '+p.nombre);
+    }
+  }catch(e){
+    toast('⚠ Error al buscar: '+e.message);
+  }
+}
+
+async function enriquecerBaseCompleta(){
+  var mapsKey = ST.cfg['cfg-maps'];
+  if(!mapsKey){ toast('⚠ Configurá tu Google Maps API Key'); showPanel('config'); return; }
+  var ps = getP();
+  var toEnrich = ps.filter(function(p){ return !p.tel || !p.web; });
+  if(!toEnrich.length){ toast('✅ Toda la base ya tiene datos completos'); return; }
+  if(!confirm('¿Buscar en Google Maps datos faltantes para '+toEnrich.length+' inmobiliarias? Puede tardar unos minutos.')) return;
+
+  toast('🔍 Enriqueciendo '+toEnrich.length+' registros...');
+  var done = 0, found = 0;
+  for(var i=0;i<ps.length;i++){
+    var p = ps[i];
+    if(p.tel && p.web) continue;
+    try{
+      var q = p.nombre + (p.zona ? ' '+p.zona : ' CABA Argentina');
+      var url = '/api/maps?query='+encodeURIComponent(q)+'&key='+mapsKey;
+      var r = await fetch(url);
+      var data = await r.json();
+      if(data.results && data.results.length){
+        var best = data.results[0];
+        var changed = false;
+        if(!ps[i].tel && (best.tel||best.phone)){ ps[i].tel = best.tel||best.phone; changed = true; }
+        if(!ps[i].web && best.website){ ps[i].web = best.website; changed = true; }
+        if(!ps[i].zona && (best.address||best.formatted_address)){ ps[i].zona = best.address||best.formatted_address; }
+        if(changed) found++;
+      }
+      done++;
+      if(done % 8 === 0){ toast('🔍 '+done+'/'+toEnrich.length+' procesados ('+found+' con datos nuevos)'); saveP(ps); }
+      await new Promise(function(res){ setTimeout(res, 400); });
+    }catch(e){ /* sigue */ }
+  }
+  saveP(ps);
+  renderP(); renderDash();
+  toast('✅ Enriquecimiento completo: '+found+' actualizados de '+done+' consultados');
+}
+
+// ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function(){
   loadCfg();
+  initVendedorLogin();
   renderDash();
   renderP();
 });
